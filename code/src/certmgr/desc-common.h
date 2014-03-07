@@ -53,6 +53,19 @@ inline T change_order(T const& t)
 	return tmp;
 }
 
+inline uint8_t* change_order(uint8_t* t, size_t sz)
+{
+	uint8_t tmp;
+	size_t half = sz / 2;
+	for (size_t i = 0; i < half; ++i) {
+		tmp = t[i];
+		t[i] = t[sz - i - 1];
+		t[sz - i - 1] = tmp;
+	}
+
+	return t;
+}
+
 template<>
 inline string change_order(string const& t)
 {
