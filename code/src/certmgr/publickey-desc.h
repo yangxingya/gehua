@@ -42,8 +42,8 @@ public:
 
 		buffer.tag = TagPublicKeyDesc;
 		buffer.length = sizeof(buffer.e) + sizeof(buffer.n);
-		memcpy(&(buffer.e[0]), e, sizeof(buffer.e));
-		memcpy(&(buffer.n[0]), n, sizeof(buffer.n));
+		memcpy(buffer.e, e, sizeof(buffer.e));
+		memcpy(buffer.n, n, sizeof(buffer.n));
 	}
 
 	uint32_t length() const { return sizeof(buffer); }
@@ -52,20 +52,19 @@ public:
 	{
 		assert(buff != 0);
 
-		buffer_t buf = buffer;
-		string na = name;
+		buffer_t buf;
+		buf.tag = buffer.tag;
+		buf.length = buffer.length;
+		memcpy(buf.e, buffer.e, sizeof(buffer.e));
+		memcpy(buf.n, buffer.n, sizeof(buffer.n));
 		if (g_byteorder == OrderLittleEndian) {
 			buf.tag = buffer.tag;
 			buf.length = change_order(buffer.length);
-			buf. = change_order(buffer.id);
-			na = change_order(name);
+			change_order(buf.e);
+			change_order(buf.n);
 		} 
 
 		memcpy(buff, &buf, sizeof(buf));
-		//todo::??? name element is string<8> ??? or string<0>
-		uint8_t nl = name.length();
-		memcpy(&buff[sizeof(buf)], &nl, sizeof(nl));
-		memcpy(&buff[sizeof(buf)+sizeof(nl)], na.c_str(), na.length());
 	}
 };
 
