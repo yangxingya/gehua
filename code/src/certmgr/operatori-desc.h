@@ -1,5 +1,4 @@
-/*
- * @brief: cert id descriptor, cert data element
+/* @brief: operator info descriptor, cert data element.
  *         cert data include 6 parts:
  *             1. cert id descriptor
  *             2. cert user info descriptor
@@ -12,50 +11,61 @@
  */
 
 
-#if !defined gehua_certmgr_certid_desc_h_
-#define  gehua_certmgr_certid_desc_h_
+#if !defined gehua_certmgr_operatori_desc_h_
+#define  gehua_certmgr_operatori_desc_h_
 
 #include <assert.h>
+#include <string>
 #include "desc-common.h"
 
 namespace gehua {
 namespace cert {
 
-struct CertIdDescriptor 
+using ::std::string;
+
+struct OperatorInfoDescriptor 
 {
 private:
 	struct buffer_t {
 		uint8_t tag;
 		uint16_t length;
-		uint64_t id;
+		uint32_t id;
 	}__attribute__((packed));
 	
 	buffer_t buffer;
+	string name;
 public:
-	CertIdDescriptor(uint64_t id)
+	OperatorInfoDescriptor(uint32_t id, string const& name)
 	{
-		buffer.tag = TagCertIdDesc;
-		buffer.length = sizeof(buffer.id);
+		buffer.tag = TagOperatorInfoDesc;
 		buffer.id = id;
+		this->name = name;
+		buffer.length = sizeof(buffer.id) + this->name.length() + 1;
 	}
 
-	uint32_t length() const { return sizeof(buffer); }
+	uint32_t length() const { return buffer.length + 3; }
 
 	void maker(uint8_t *buff) const
 	{
 		assert(buff != 0);
 
 		buffer_t buf = buffer;
+		string na = name;
 		if (g_byteorder == OrderLittleEndian) {
 			buf.tag = buffer.tag;
 			buf.len = change_order(buffer.length);
-			buf.id = change_order(buffer.id);			
+			buf.id = change_order(buffer.id);
+			na = change_order(name);
 		} 
 
 		memcpy(buff, &buf, sizeof(buf));
+		//todo::??? name element is string<8> ??? or string<0>
+		uint8_t nl = name.length();
+		memcpy(&buff[sizeof(buf)], &nl, sizeof(nl));
+		memcpy(&buff[sizeof(buf)+sizeof(nl)], na.c_str(), na.length());
 	}
 };
 
 } // namespace gehua
 } // namespace cert
-#endif //gehua_certmgr_certid_desc_h_
+#endif //gehua_certmgr_opertaori_desc_h_
