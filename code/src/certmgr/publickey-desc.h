@@ -15,13 +15,10 @@
 #define  gehua_certmgr_publickey_desc_h_
 
 #include <assert.h>
-#include <string>
 #include "desc-common.h"
 
 namespace gehua {
 namespace cert {
-
-using ::std::string;
 
 struct PublicKeyDescriptor 
 {
@@ -37,8 +34,8 @@ private:
 public:
 	PublicKeyDescriptor(uint8_t e[4], uint8_t n[128])
 	{
-		assert(e != NULL);
-		assert(n != NULL);
+		assert(e != 0);
+		assert(n != 0);
 
 		buffer.tag = TagPublicKeyDesc;
 		buffer.length = sizeof(buffer.e) + sizeof(buffer.n);
