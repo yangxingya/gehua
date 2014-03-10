@@ -6,10 +6,18 @@
 #if !defined gehua_businesslogic_business_pool_h_
 #define gehua_businesslogic_business_pool_h_
 
+#include <vector>
+#include "../sessionmgr/casession.h"
+#include "../sessionmgr/casessionmgr.h"
+#include "workpool.h"
+
 namespace gehua {
 namespace businesslogic {
 
+using ::std::vector;
+
 class Work;
+class DelayWork;
 class BusinessPool
 {
 public:
