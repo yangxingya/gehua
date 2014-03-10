@@ -7,6 +7,7 @@
 
 #include <stack>
 #include <string>
+#include "../comm-def.h"
 #include "../bs-comm-def.h"
 
 namespace gehua {
