@@ -22,6 +22,8 @@ public:
 	CASession(caid_t caid, TimeOutTimer& timeout_timer);
 	void Add(TerminalSession* terminal_session);
   void Remove(uint64_t terminal_session_id);
+
+  caid_t Id() const { return caid_; }
 private:
 	map<uint64_t, TerminalSession*> terminal_session_map_;
 	TimeOutTimer& timeout_timer_;

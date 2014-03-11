@@ -15,6 +15,9 @@ namespace gehua {
 namespace businesslogic {
 
 using ::std::vector;
+using ::gehua::sessionmgr::CASession;
+using ::gehua::sessionmgr::CASessionMgr;
+using ::gehua::sessionmgr::TerminalSession;
 
 class Work;
 class DelayWork;
@@ -24,11 +27,16 @@ public:
 	void AddWork(Work *wk, caid_t caid);
 	void AddDelayWork(DelayWork *delay_wk, caid_t caid);
 
+  /*
 	CASession* CreateCASession(caid_t caid);
 	void DestroyCASession(CASession *ca_session);
-	
 	void Attach(CASession *ca_session);
 	CASession* Detach(caid_t caid);
+  */
+
+  void Add(TerminalSession *terminal_session);
+  void Remove(TerminalSession *terminal_session);
+
 
 	CASession* FindCASessionById(caid_t caid);
 	CASession* FindCASessionByTerminalSessionId(uint64_t terminal_session_id);

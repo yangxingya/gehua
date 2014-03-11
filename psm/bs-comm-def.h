@@ -5,7 +5,11 @@
 #if !defined gehua_business_common_define_h_
 #define gehua_business_common_define_h_
 
+#include <string>
+
 namespace gehua {
+
+using ::std::string;
 
 // Business page status, 
 // read from config.

@@ -19,6 +19,7 @@ using ::std::string;
 class TerminalConnection;
 struct TerminalSession
 {
+  CASession *ca_session;
 	caid_t caid;
 	uint64_t id;
 	TerminalConnection *terminal_conn;
