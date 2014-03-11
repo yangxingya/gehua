@@ -187,6 +187,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\psmcontext.h"
+				>
+			</File>
+			<File
 				RelativePath=".\timeouttimer.h"
 				>
 			</File>
@@ -268,6 +272,10 @@
 		<Filter
 			Name="businesslogic"
 			>
+			<File
+				RelativePath=".\businesslogic\businesspool.cpp"
+				>
+			</File>
 			<File
 				RelativePath=".\businesslogic\businesspool.h"
 				>
