@@ -1,4 +1,4 @@
-/* @brief: public key descriptor, cert data info
+/* @brief: expire time descriptor, cert data info
  *         cert data include 6 parts:
  *             1. cert id descriptor
  *             2. cert user info descriptor
@@ -11,13 +11,13 @@
  */
 
 
-#if !defined gehua_certmgr_publickey_desc_h_
-#define  gehua_certmgr_publickey_desc_h_
+#if !defined gehua_certmgr_expiretime_desc_h_
+#define  gehua_certmgr_expiretime_desc_h_
 
 #include <assert.h>
 #include "desc-common.h"
 
-struct PublicKeyDescriptor 
+struct ExpireTimeDescriptor 
 {
 private:
   COMPACT_ALIGNED_BEGIN
@@ -31,12 +31,12 @@ private:
 	
 	buffer_t buffer;
 public:
-	PublicKeyDescriptor(uint8_t e[4], uint8_t n[128])
+	ExpireTimeDescriptor(uint8_t e[4], uint8_t n[128])
 	{
 		assert(e != 0);
 		assert(n != 0);
 
-		buffer.tag = TagPublicKeyDesc;
+		buffer.tag = TagExpireTimeDesc;
 		buffer.length = sizeof(buffer.e) + sizeof(buffer.n);
 		memcpy(buffer.e, e, sizeof(buffer.e));
 		memcpy(buffer.n, n, sizeof(buffer.n));
@@ -64,4 +64,4 @@ public:
 	}
 };
 
-#endif //gehua_certmgr_publickey_desc_h_
+#endif // !gehua_certmgr_expiretime_desc_h_

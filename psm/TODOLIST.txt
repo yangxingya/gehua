@@ -1,0 +1,21 @@
+/*
+ * @brief: the following is psm todo list 
+ */
+ 
+1. psm cert data expiretime and signature part.
+2. for windows debug, must write portable pack, for example: 
+	#ifdef _MSC_VER 
+	#define pack_begin(x) #pragma pack(x)
+	#define pack_end()    #pragma pack()
+	#else
+	#ifdef __GUNC__
+	#define pack_begin(x) ...
+	#define pack_end()
+	#endif 
+	#endif
+--------------------> ok ... ohahaha, done!
+	
+3. main.cpp and main logic.
+4. config file for read.
+5. http server.
+6. http client.

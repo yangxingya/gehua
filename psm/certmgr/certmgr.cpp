@@ -17,7 +17,7 @@ void CertMgr::SaveCert(string const& userid, string const& cert)
 
 bool CertMgr::ValidCert(string const& userid, string const& cert) const
 {
-	map<string, string>::iterator it = cert_map_.find(userid);
+	map<string, string>::const_iterator it = cert_map_.find(userid);
 	if (it == cert_map_.end())
 		return false;
 

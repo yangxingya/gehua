@@ -18,19 +18,18 @@
 #include <string>
 #include "desc-common.h"
 
-namespace gehua {
-namespace cert {
-
 using ::std::string;
 
 struct OperatorInfoDescriptor 
 {
 private:
+  COMPACT_ALIGNED_BEGIN
 	struct buffer_t {
 		uint8_t tag;
 		uint16_t length;
 		uint32_t id;
-	}__attribute__((packed));
+	}
+  COMPACT_ALIGNED_END
 	
 	buffer_t buffer;
 	string name;
@@ -66,6 +65,4 @@ public:
 	}
 };
 
-} // namespace gehua
-} // namespace cert
 #endif //gehua_certmgr_opertaori_desc_h_

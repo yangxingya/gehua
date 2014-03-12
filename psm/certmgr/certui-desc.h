@@ -19,19 +19,18 @@
 #include <map>
 #include "desc-common.h"
 
-namespace gehua {
-namespace cert {
-
 using ::std::string;
 using ::std::map;
 
 struct CertUiDescriptor 
 {
 private:
+  COMPACT_ALIGNED_BEGIN
 	struct buffer_t {
 		uint8_t tag;
 		uint16_t length;
-	}__attribute__((packed));
+	}
+  COMPACT_ALIGNED_END
 	
 	buffer_t buffer;
 	string user_info;
@@ -67,6 +66,4 @@ public:
 	}
 };
 
-} // namespace gehua
-} // namespace cert
 #endif //gehua_certmgr_certui_desc_h_

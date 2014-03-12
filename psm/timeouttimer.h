@@ -5,12 +5,9 @@
 #if !defined gehua_timeouttimer_h_
 #define gehua_timeouttimer_h_
 
-namespace gehua {
-
-class TimeOutTimer // : public Timer
+struct TimeOutTimer // : public Timer
 {
 	
 };
 
-} // namespace gehua
 #endif // !gehua_timeouttimer_h_

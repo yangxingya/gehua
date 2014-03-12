@@ -18,17 +18,16 @@
 #include <assert.h>
 #include "desc-common.h"
 
-namespace gehua {
-namespace cert {
-
 struct CertIdDescriptor 
 {
 private:
+  COMPACT_ALIGNED_BEGIN
 	struct buffer_t {
 		uint8_t tag;
 		uint16_t length;
 		uint64_t id;
-	}__attribute__((packed));
+	}
+  COMPACT_ALIGNED_END
 	
 	buffer_t buffer;
 public:
@@ -56,6 +55,4 @@ public:
 	}
 };
 
-} // namespace gehua
-} // namespace cert
 #endif //gehua_certmgr_certid_desc_h_

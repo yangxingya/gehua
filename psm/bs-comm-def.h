@@ -7,7 +7,9 @@
 
 #include <string>
 
-namespace gehua {
+#ifdef _MSC_VER
+#include <cpplib/cpplibbase.h>
+#endif // _MSC_VER
 
 using ::std::string;
 
@@ -76,7 +78,5 @@ struct OdcInfo
 	 */
 	uint32_t expired_date;
 };
-
-} // namespace gehua
 
 #endif // !gehua_business_common_define_h_

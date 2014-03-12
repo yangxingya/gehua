@@ -11,9 +11,6 @@
 #include <cpplib/logger.h>
 #include <cpplib/workqueue.h>
 
-namespace gehua {
-namespace businesslogic {
-
 using ::std::vector;
 
 struct WorkPool 
@@ -21,41 +18,39 @@ struct WorkPool
   WorkPool(Logger& logger, int sz = 1);
 
   void Assign(Work *wk, int id);
-  void Assign(DelayWork *dwk, int id);
+  void Assign(DelayedWork *dwk, int id);
 private:
   Logger &logger_;
-  vector<WorkQueue> wq_array_;
-  vector<WorkQueue> delay_wq_array_;
+  vector<WorkQueue*> wq_array_;
+  vector<WorkQueue*> delay_wq_array_;
 };
 
 inline 
-void WorkPool::WorkPool(Logger& logger, int sz)
+WorkPool::WorkPool(Logger& logger, int sz)
   : logger_(logger)
 {
-  wq_array_.resize(sz);
-  delay_wq_array_.resize(sz);
+  for (int i = 0; i < sz; ++i) {
+    wq_array_.push_back(new WorkQueue);
+    delay_wq_array_.push_back(new WorkQueue);
+  }
 }
 
 inline
 void WorkPool::Assign(Work *wk, int id)
 {
   assert(id >= 0);
-  assert(id < wq_array_.size());
+  assert(id < (int)wq_array_.size());
 
-  wq_array_[id].QueueWork(wk);
+  wq_array_[id]->QueueWork(wk);
 }
 
 inline
-void WorkPool::Assign(DelayWork *dwk, int id)
+void WorkPool::Assign(DelayedWork *dwk, int id)
 {
   assert(id >= 0);
-  assert(id < delay_wq_array_.size());
+  assert(id < (int)delay_wq_array_.size());
 
-  delay_wq_array_[id].QueueWork(dwk);
+  delay_wq_array_[id]->QueueWork(dwk);
 }
-
-} // namespace businesslogic
-} // namespace gehua
-
 
 #endif // !gehua_businesslogic_work_pool_h_

@@ -172,6 +172,10 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File
+				RelativePath=".\psm.cpp"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="Header Files"
@@ -205,19 +209,31 @@
 			Name="tcpserver"
 			>
 			<File
-				RelativePath=".\tcpserver\businessconnection.h"
+				RelativePath=".\tcpserver\busiconnection.h"
 				>
 			</File>
 			<File
-				RelativePath=".\tcpserver\businessserver.h"
+				RelativePath=".\tcpserver\busiserver.cpp"
 				>
 			</File>
 			<File
-				RelativePath=".\tcpserver\terminalconnection.h"
+				RelativePath=".\tcpserver\busiserver.h"
 				>
 			</File>
 			<File
-				RelativePath=".\tcpserver\terminalserver.h"
+				RelativePath=".\tcpserver\termconnection.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tcpserver\termconnection.h"
+				>
+			</File>
+			<File
+				RelativePath=".\tcpserver\termserver.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\tcpserver\termserver.h"
 				>
 			</File>
 		</Filter>
@@ -225,7 +241,15 @@
 			Name="sessionmgr"
 			>
 			<File
+				RelativePath=".\sessionmgr\casession.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\sessionmgr\casession.h"
+				>
+			</File>
+			<File
+				RelativePath=".\sessionmgr\casessionmgr.cpp"
 				>
 			</File>
 			<File
@@ -233,7 +257,11 @@
 				>
 			</File>
 			<File
-				RelativePath=".\sessionmgr\terminalsession.h"
+				RelativePath=".\sessionmgr\termsession.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\sessionmgr\termsession.h"
 				>
 			</File>
 		</Filter>
@@ -261,6 +289,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\certmgr\expiretime-desc.h"
+				>
+			</File>
+			<File
 				RelativePath=".\certmgr\operatori-desc.h"
 				>
 			</File>
@@ -285,6 +317,18 @@
 				>
 			</File>
 		</Filter>
+		<Filter
+			Name="config"
+			>
+			<File
+				RelativePath=".\config\config.h"
+				>
+			</File>
+		</Filter>
+		<File
+			RelativePath=".\TODOLIST.txt"
+			>
+		</File>
 	</Files>
 	<Globals>
 	</Globals>

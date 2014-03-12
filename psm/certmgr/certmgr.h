@@ -11,12 +11,10 @@
 #include <vector>
 #include <map>
 
-namespace gehua {
-namespace cert {
-
 using ::std::vector;
 using ::std::string;
 using ::std::map;
+
 class CertMgr
 {
 public:
@@ -44,6 +42,4 @@ private:
 	map<string, string> cert_map_;
 };
 
-} // namespace cert
-} // namespace gehua
 #endif //!defined gehua_certmgr_h_
