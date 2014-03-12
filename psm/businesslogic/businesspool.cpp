@@ -30,6 +30,9 @@ TerminalSession* BusinessPool::GenTermSession(PtLoginRequest *msg, TerminalConne
        //log.
        return NULL;
     }
+
+    //login valid ok.
+    ts->valid_status = 0;
     
     CASessionMgr &cs_mgr = pool_relation_ca_session_mgr_[getId(ts->Id())];
     CASession *cs = cs_mgr.FindCASessionById(ts->CAId());
@@ -40,9 +43,8 @@ TerminalSession* BusinessPool::GenTermSession(PtLoginRequest *msg, TerminalConne
 
     ts->ca_session = cs;
     cs->Add(ts);
-
-    
-
+  
+    return ts;
 }
 
 int BusinessPool::getId(uint64_t term_session_id)
@@ -52,5 +54,21 @@ int BusinessPool::getId(uint64_t term_session_id)
 
 void BusinessPool::DelTermSession(TerminalSession *term_session)
 {
+    assert(term_session != 0);
 
+    CASession *cs = term_session->ca_session;
+
+    if (cs == NULL) {
+        //log.
+        return;
+    }
+
+    cs->Remove(term_session->Id());
+    
+    //remove ca session.
+    if (cs->termCnt() == 0) {
+        CASessionMgr &cs_mgr = pool_relation_ca_session_mgr_[getId(ts->Id())];
+        cs_mgr.Detach(cs->Id());
+        cs_mgr.Destory(cs);
+    }
 }

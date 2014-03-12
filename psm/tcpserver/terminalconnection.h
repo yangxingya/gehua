@@ -75,6 +75,7 @@ struct TerminalConnection : public AioConnection
             recv_buffer_.SetReadPtr(len);
             recv_buffer_.FlushReadPtr();
             
+            //login valid.
             if (!login_) {
                 if (msg->msg_id_ != CLOUDv2_PT_TERM_LOGIN_REQUEST) {
                     // set session invalid
@@ -85,11 +86,18 @@ struct TerminalConnection : public AioConnection
 
                 term_session_ = psm_ctx_->busi_pool_.GenTermSession(msg, this);
                 if (term_session_ == NULL) {
-                    //
+                    LOG_WARN("[%s:TCP] 终端连接后第一个请求验证失败：%s, dump:\n%s", IdString().c_str(), GetPeerAddr().c_str(), recv_buffer_.DumpHex(16,true).c_str());
+                    SetDirty();
                     break;
-                }  
+                }
+                login_ = true;
             }
 
+            //todo:: work to add 
+            Work *wk; // = new ...;
+            psm_ctx_->busi_pool_.Assign(wk, term_session_->CAId());
+
+            /*
             //business logic 
             PtHeartbeatRequest* hb_msg = dynamic_cast<PtHeartbeatRequest*>(msg);
             if ( hb_msg != NULL && hb_msg->test_data_desc_.valid_ ) {
@@ -97,6 +105,7 @@ struct TerminalConnection : public AioConnection
                 SendHeartbeatResponse( hb_msg->test_data_desc_.request_str_ );
             }
             delete msg;
+            */
         }
     }
 
@@ -147,18 +156,15 @@ struct TerminalConnection : public AioConnection
     double   create_time_;
     double   last_heartbeat_time_;
 
-	  uint64_t term_session_id_;
 	  TerminalSession *term_session_;
-  	
-	  caid_t ca_id_;
-	  CASession *ca_session_;
 
 	  int timeout_;
 
+    PSMContext *psm_ctx_;
+
+private:
     // is login ??? flags.
     bool login_;
-
-    PSMContext *psm_ctx_;
 };
 
 } // namespace tcpserver

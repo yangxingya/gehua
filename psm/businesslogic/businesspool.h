@@ -25,6 +25,7 @@ struct TerminalConnection;
 
 class Work;
 class DelayWork;
+
 class BusinessPool
 {
 public:
@@ -32,20 +33,12 @@ public:
 	void AddWork(Work *wk, caid_t caid);
 	void AddDelayWork(DelayWork *delay_wk, caid_t caid);
 
-  /*
-	CASession* CreateCASession(caid_t caid);
-	void DestroyCASession(CASession *ca_session);
-	void Attach(CASession *ca_session);
-	CASession* Detach(caid_t caid);
-  */
-
   TerminalSession* GenTermSession(PtLoginRequest *msg, TerminalConnection *conn);
   void DelTermSession(TerminalSession *term_session);
-
-  int getId(uint64_t term_session_id);
-
 	CASession* FindCASessionById(caid_t caid);
 	CASession* FindCASessionByTerminalSessionId(uint64_t terminal_session_id);
+private:
+  int getId(uint64_t term_session_id);
 private:
   Logger &logger_;
 	WorkPool wk_pool_;

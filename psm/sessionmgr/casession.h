@@ -24,6 +24,7 @@ public:
   void Remove(uint64_t terminal_session_id);
 
   caid_t Id() const { return caid_; }
+  size_t termCnt() const { return terminal_session_map_.size(); }
 private:
 	map<uint64_t, TerminalSession*> terminal_session_map_;
 	TimeOutTimer& timeout_timer_;
