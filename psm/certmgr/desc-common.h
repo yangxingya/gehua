@@ -1,6 +1,6 @@
 /*
- *
- */
+*
+*/
 
 
 #if !defined gehua_certmgr_desccomm_h_
@@ -11,27 +11,17 @@
 #include <vector>
 #include "../comm-def.h"
 
-#ifdef _MSC_VER
-# define COMPACT_ALIGNED_BEGIN  #pragma pack(1)
-# define COMPACT_ALIGNED_END    ;#pragma pack()
-#else
-# ifdef __GUNC__
-#  define COMPACT_ALIGNED_BEGIN 
-#  define COMPACT_ALIGNED_END   __attribute__((packed));
-# endif
-#endif
-
 using ::std::string;
 using ::std::map;
 using ::std::vector;
 
 enum CommonDescriptorTag {
-	TagCertIdDesc = 0x01,
-	TagCertUserInfoDesc = 0x02,
-	TagOperatorInfoDesc = 0x03,
-	TagPublicKeyDesc = 0x04,
-	TagSignatureDesc = 0x05,
-  TagExpireTimeDesc = 0x06,
+    TagCertIdDesc = 0x01,
+    TagCertUserInfoDesc = 0x02,
+    TagOperatorInfoDesc = 0x03,
+    TagPublicKeyDesc = 0x04,
+    TagSignatureDesc = 0x05,
+    TagExpireTimeDesc = 0x06,
 };
 
 #define USERINFO_STR_SP1 "&"
@@ -44,42 +34,44 @@ enum CommonDescriptorTag {
 
 struct UserInfo
 {
-  string id;
-  string card_id;
-  string term_id;
-  string mac_addr;
-  UserInfo(string const& user_info)
-    : valid_(true)
-  {
-    map<string, string> out;
-    split(user_info, USERINFO_STR_SP1, USERINFO_STR_SP2, &out);
+    string id;
+    string card_id;
+    string term_id;
+    string mac_addr;
 
-    //three valid element. [must be existed].
-    map<string, string>::iterator it;
-    if ((it = out.find(USERINFO_STR_USERID_KEY)) == out.end()) {
-      valid_ = false;
-      return;
-    }
-    if ((it = out.find(USERINFO_STR_TERMID_KEY)) == out.end()) {
-      valid_ = false;
-      return;
-    }
-    if ((it = out.find(USERINFO_STR_TERMMAC_KEY)) == out.end()) {
-      valid_ = false;
-      return;
-    }
+    UserInfo(string const& user_info)
+        : valid_(true)
+    {
+        map<string, string> out;
+        split(user_info, USERINFO_STR_SP1, USERINFO_STR_SP2, &out);
 
-    id = out[USERINFO_STR_USERID_KEY];
-    term_id = out[USERINFO_STR_TERMID_KEY];
-    mac_addr = out[USERINFO_STR_TERMMAC_KEY];
+        //three valid element. [must be existed].
+        map<string, string>::iterator it;
+        if ((it = out.find(USERINFO_STR_USERID_KEY)) == out.end()) {
+            valid_ = false;
+            return;
+        }
+        if ((it = out.find(USERINFO_STR_TERMID_KEY)) == out.end()) {
+            valid_ = false;
+            return;
+        }
+        if ((it = out.find(USERINFO_STR_TERMMAC_KEY)) == out.end()) {
+            valid_ = false;
+            return;
+        }
 
-    //one valid element [optional segment].
-    if ((it = out.find(USERINFO_STR_CARDID_KEY)) != out.end()) {
-      card_id = out[USERINFO_STR_CARDID_KEY];
+        id = out[USERINFO_STR_USERID_KEY];
+        term_id = out[USERINFO_STR_TERMID_KEY];
+        mac_addr = out[USERINFO_STR_TERMMAC_KEY];
+
+        //one valid element [optional segment].
+        if ((it = out.find(USERINFO_STR_CARDID_KEY)) != out.end()) {
+            card_id = out[USERINFO_STR_CARDID_KEY];
+        }
     }
-  }
+    bool valid() const { return valid_; }
 private:
-  bool valid_;
+    bool valid_;
 };
 
 #endif //!gehua_certmgr_desccomm_h_

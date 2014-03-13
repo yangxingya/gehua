@@ -1,6 +1,6 @@
 /*
- * @brief: terminal server, tcp server, not http server
- */
+* @brief: terminal server, tcp server, not http server
+*/
 
 #if !defined gehua_tcpserver_terminal_server_h_
 #define gehua_tcpserver_terminal_server_h_
@@ -14,6 +14,7 @@
 #include <cpplib/netaio/aioreceiver.h>
 #include <cpplib/netaio/aiosender.h>
 #include <cpplib/netaio/aiomanager.h>
+#include "../comm-def.h"
 #include "termconnection.h"
 
 struct PSMContext;
@@ -75,6 +76,9 @@ struct TermServer : public AioTcpServer
     uint32_t read_count_;
 
     PSMContext *psm_ctx_;
+
+    string Addr() const { return listen_addr_; }
+    string ip_string() const { return ::ip_string(listen_addr_); }
 };
 
 #endif // !gehua_tcpserver_terminal_server_h_

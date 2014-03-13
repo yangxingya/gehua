@@ -1,6 +1,6 @@
 /*
- * @brief: terminal connection, tcp server connection.
- */
+* @brief: terminal connection, tcp server connection.
+*/
 
 #if !defined gehua_tcpserver_terminal_connection_h_
 #define gehua_tcpserver_terminal_connection_h_
@@ -46,11 +46,11 @@ struct TermConnection : public AioConnection
     double   create_time_;
     double   last_heartbeat_time_;
 
-    /*sessionmgr::*/TermSession *term_session_;
+    TermSession *term_session_;
 
-	  int timeout_;
+    int timeout_;
 
-    /*psm::*/PSMContext *psm_ctx_;
+    PSMContext *psm_ctx_;
 
 private:
     // is login ??? flags.

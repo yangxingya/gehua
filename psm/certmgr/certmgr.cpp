@@ -2,24 +2,24 @@
 
 string CertMgr::GenerateChallengeCode(string const& userid, string const& ip)
 {
-	return userid + ip;
+    return userid + ip;
 }
 
 string CertMgr::GenerateCert(string const& userid)
 {
-	return userid;
+    return userid;
 }
 
 void CertMgr::SaveCert(string const& userid, string const& cert)
 {
-	cert_map_[userid] = cert;
+    cert_map_[userid] = cert;
 }
 
 bool CertMgr::ValidCert(string const& userid, string const& cert) const
 {
-	map<string, string>::const_iterator it = cert_map_.find(userid);
-	if (it == cert_map_.end())
-		return false;
+    map<string, string>::const_iterator it = cert_map_.find(userid);
+    if (it == cert_map_.end())
+        return false;
 
-	return it->second == cert;
+    return it->second == cert;
 }
