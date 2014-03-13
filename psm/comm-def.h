@@ -29,18 +29,6 @@
 # endif 
 #endif
 
-// bytes aligned by compact methods.
-// compact methods: by struct min bytes aligned.
-#ifdef _MSC_VER
-# define COMPACT_ALIGNED_BEGIN  #pragma pack(1)
-# define COMPACT_ALIGNED_END    ;#pragma pack()
-#else
-# ifdef __GUNC__
-#  define COMPACT_ALIGNED_BEGIN 
-#  define COMPACT_ALIGNED_END   __attribute__((packed));
-# endif
-#endif
-
 #ifdef _MSC_VER
 # define U64T  "%I64u"
 # define S64T  "%I64d"
@@ -214,7 +202,11 @@ inline uint32_t ip_cast(string const& ipstr)
     if (out.size() != 4)
         return 0;
 
-    // union.
+    // portable... can't use macro to set coding easy
+    // todo:: who have best idea please email: yangxingya@novel-supertv.com
+#ifdef _MSC_VER
+    #pragma pack(1)
+#endif // _MSC_VER
     union tmp_t {
         struct {
             uint8_t t1;
@@ -223,7 +215,16 @@ inline uint32_t ip_cast(string const& ipstr)
             uint8_t t4;
         } bs;
         uint32_t value;
-    };
+    }
+#ifdef _MSC_VER
+    ;
+    #pragma pack(1)
+#else // _MSC_VER
+# ifdef __GUNC__
+    __attribute__((packed));
+# endif // __GUNC__
+    ;
+#endif // !_MSC_VER
 
     tmp_t tmp;
 

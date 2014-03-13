@@ -34,7 +34,7 @@ struct PSMContext
         ip_str_  = term_server_.ip_string();
         ip_addr_ = ip_cast(ip_str_);
 
-        logger_.Info("PSM TerminalServer Ip: %s", ip_str_.c_str()); 
+        logger_.Info("PSM TerminalServer ip: %s", ip_str_.c_str()); 
     }
 
     bool Start()
@@ -79,13 +79,11 @@ struct PSMContext
         //todo:: delete all connection?
         term_server_.Stop();
         busi_server_.Stop();
-
         busi_pool_.Stop();
     }
 
     string ip_string() const { return ip_str_; }
     uint32_t ip_addr() const { return ip_addr_; }
-
 private:
     
     string   ip_str_;

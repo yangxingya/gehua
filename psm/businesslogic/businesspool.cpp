@@ -40,7 +40,7 @@ uint64_t BusinessPool::genTermSessionId(
     // terminal session id is 64 bit 
     // [ip<1bytes>] + [time<3bytes>] + [global_cnt<2bytes>] + [caid<2bytes>];
 
-    // portable... can't use macro to set....
+    // portable... can't use macro to set coding easy
     // todo:: who have best idea please email: yangxingya@novel-supertv.com
 #ifdef _MSC_VER
     #pragma pack(1)

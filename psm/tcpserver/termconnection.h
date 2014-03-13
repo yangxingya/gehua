@@ -20,9 +20,9 @@ struct TermSession;
 struct PtBase;
 struct TermConnection : public AioConnection
 {
-    TermConnection(TCPConnection* tcp, AioTcpServer* server) 
+    TermConnection(ILogger* logger, TCPConnection* tcp, AioTcpServer* server) 
         : AioConnection(tcp,server)
-        , logger_(0)
+        , logger_(logger)
         , create_time_(get_up_time()),last_heartbeat_time_(0) 
         , term_session_(0)
         , timeout_(0), login_(false)

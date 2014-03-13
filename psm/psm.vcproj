@@ -213,6 +213,10 @@
 			Name="tcpserver"
 			>
 			<File
+				RelativePath=".\tcpserver\busiconnection.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\tcpserver\busiconnection.h"
 				>
 			</File>

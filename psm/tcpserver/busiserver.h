@@ -36,10 +36,9 @@ public:
         , read_count_(0)
         , psm_ctx_(0)
     {
-        //SetLogger(&logger);
     }
 
-    virtual string IdString() { return "BusinessServer"; } 
+    virtual string IdString() { return "BusiServer"; } 
     virtual AioConnection* OnConnected(TCPConnection* tcp);
 
     virtual void OnDisconnected( AioConnection* conn );

@@ -4,7 +4,7 @@
 
 AioConnection* TermServer::OnConnected( TCPConnection* tcp )
 {
-    TermConnection* new_conn = new TermConnection(tcp, this);
+    TermConnection* new_conn = new TermConnection(logger_, tcp, this);
 
     //set psm context.
     new_conn->psm_ctx_ = psm_ctx_;

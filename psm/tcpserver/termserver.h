@@ -27,7 +27,6 @@ struct TermServer : public AioTcpServer
         , read_count_(0)
         , psm_ctx_(0)
     {
-        //SetLogger(&g_logger);
     }
 
     virtual ~TermServer()
