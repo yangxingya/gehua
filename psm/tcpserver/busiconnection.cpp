@@ -39,7 +39,7 @@ void BusiConnection::OnDataReceived()
 
         //todo:: work to add 
         Work *wk; // = new ...;
-        //psm_ctx_->busi_pool_.Assign(wk, term_session_->CAId());
+        //psm_ctx_->busi_pool_->Assign(wk, term_session_->CAId());
     }
 }
 

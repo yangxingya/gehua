@@ -58,7 +58,9 @@ void WorkPool::Assign(DelayedWork *dwk, int id)
 inline 
 void WorkPool::CancelAllWork()
 {
-
+    for (size_t i = 0; i < wq_array_.size(); ++i) {
+        //
+    }
 }
 
 

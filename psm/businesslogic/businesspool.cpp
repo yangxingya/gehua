@@ -40,11 +40,7 @@ uint64_t BusinessPool::genTermSessionId(
     // terminal session id is 64 bit 
     // [ip<1bytes>] + [time<3bytes>] + [global_cnt<2bytes>] + [caid<2bytes>];
 
-    // portable... can't use macro to set coding easy
-    // todo:: who have best idea please email: yangxingya@novel-supertv.com
-#ifdef _MSC_VER
     #pragma pack(1)
-#endif // _MSC_VER
     union tmp_t {
         struct {
             uint8_t  ip;
@@ -54,16 +50,8 @@ uint64_t BusinessPool::genTermSessionId(
             uint16_t ca;
         } pt;
         uint64_t value;
-    }
-#ifdef _MSC_VER
-    ;
+    } ATTR_PACKED ;
     #pragma pack(1)
-#else // _MSC_VER
-# ifdef __GUNC__
-    __attribute__((packed));
-# endif // __GUNC__
-    ;
-#endif // !_MSC_VER
 
     uint32_t ti = (uint32_t)time;
 
@@ -76,6 +64,28 @@ uint64_t BusinessPool::genTermSessionId(
     tmp.pt.ca = (uint16_t)(caid & 0x00000000000000FF);
 
     return tmp.value;
+}
+
+uint16_t BusinessPool::getCABytesByTermSessionId(uint64_t ts_id)
+{
+    // is high 2 bytes or low 2bytes;
+
+    //uint64_t and = 0x000000000000FFFF;
+    //return (uint16_t)(ts_id & and);
+
+    uint64_t and = 0xFFFF000000000000;
+    return (uint16_t)((ts_id & and) >> 48);
+}
+
+uint16_t BusinessPool::getCAbytesByCAId(caid_t caid)
+{
+    // is high 2 bytes or low 2bytes;
+
+    //uint64_t and = 0x000000000000FFFF;
+    //return (uint16_t)(caid & and);
+
+    uint64_t and = 0xFFFF000000000000;
+    return (uint16_t)((caid & and) >> 48);
 }
 
 TermSession* BusinessPool::GenTermSession(PtLoginRequest *msg, TermConnection *conn)
@@ -113,14 +123,14 @@ TermSession* BusinessPool::GenTermSession(PtLoginRequest *msg, TermConnection *c
     return ts;
 }
 
-int BusinessPool::getIdByTermSessionId(uint64_t term_session_id)
+int BusinessPool::getIdByTermSessionId(uint64_t ts_id)
 {
-    return (int)(term_session_id % thread_cnt_);
+    return (int)(getCABytesByTermSessionId(ts_id) % thread_cnt_);
 }
 
 int BusinessPool::getIdByCAId(caid_t caid)
 {
-    return (int)(caid % thread_cnt_);
+    return (int)(getCAbytesByCAId(caid) % thread_cnt_);
 }
 
 uint32_t BusinessPool::DelTermSession(TermSession *ts)
@@ -160,4 +170,11 @@ bool BusinessPool::Start()
 void BusinessPool::Stop()
 {
     started_ = false;
+}
+
+TermSession* BusinessPool::FindTermSessionById(uint64_t ts_id)
+{
+    CASessionMgr *csmgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(ts_id)];
+    
+    return NULL;
 }

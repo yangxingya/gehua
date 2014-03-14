@@ -6,36 +6,30 @@
 #if !defined gehua_common_define_h_
 #define gehua_common_define_h_
 
+#ifdef _WIN32
+# include <winsock2.h>
+#else // _WIN32
+# ifdef __linux__
+
+# endif // __linux__
+#endif // !_WIN32
+
 #include <string>
 #include <vector>
 #include <map>
-#ifdef _MSC_VER
-#include <cpplib/cpplibbase.h>
-#endif // _MSC_VER
 
 #ifdef _MSC_VER
+# include <cpplib/cpplibbase.h>  //for type define uint<xx>_t;
+# define U64T  "%I64u"  //for unsigned __int64 printf format.
+# define S64T  "%I64d"  //for __int64 printf format.
+# define ATTR_PACKED 
  typedef unsigned __int64 caid_t;
-#else // _MSC_VER
-# ifdef __GUNC__
-   typedef uint64_t caid_t;
-# endif // __GUNC__
-#endif // !_MSC_VER
-
-#ifdef _WIN32
-# include <winsock2.h>
-#else
-# ifdef __linux__
-
-# endif 
-#endif
-
-#ifdef _MSC_VER
-# define U64T  "%I64u"
-# define S64T  "%I64d"
 #else // _MSC_VER
 # ifdef __GUNC__
 #  define U64T "%llu"
 #  define S64T "%lld"
+#  define ATTR_PACKED __attribute__((packed))
+   typedef uint64_t caid_t;
 # endif // __GUNC__
 #endif // !_MSC_VER
 
@@ -202,11 +196,7 @@ inline uint32_t ip_cast(string const& ipstr)
     if (out.size() != 4)
         return 0;
 
-    // portable... can't use macro to set coding easy
-    // todo:: who have best idea please email: yangxingya@novel-supertv.com
-#ifdef _MSC_VER
     #pragma pack(1)
-#endif // _MSC_VER
     union tmp_t {
         struct {
             uint8_t t1;
@@ -215,16 +205,9 @@ inline uint32_t ip_cast(string const& ipstr)
             uint8_t t4;
         } bs;
         uint32_t value;
-    }
-#ifdef _MSC_VER
-    ;
+    } ATTR_PACKED ;
     #pragma pack(1)
-#else // _MSC_VER
-# ifdef __GUNC__
-    __attribute__((packed));
-# endif // __GUNC__
-    ;
-#endif // !_MSC_VER
+
 
     tmp_t tmp;
 

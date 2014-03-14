@@ -21,7 +21,8 @@ enum BusinessStatus
     BSPortal = 2,
     BSGame = 3,
     BSVOD = 4,
-    BSPending = 5,
+    BSPhoneControl = 5,
+    BSPending = 6,
 };
 
 enum TerminalClass 
@@ -63,6 +64,7 @@ enum Modulation
 
 struct ServiceGroup 
 {
+    uint32_t sg_id;
     uint32_t freq;
     uint32_t symbol_rate;
     Modulation modulation;

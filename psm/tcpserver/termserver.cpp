@@ -6,6 +6,8 @@ AioConnection* TermServer::OnConnected( TCPConnection* tcp )
 {
     TermConnection* new_conn = new TermConnection(logger_, tcp, this);
 
+    logger_->Trace("PSM new Terminal connection in");
+
     //set psm context.
     new_conn->psm_ctx_ = psm_ctx_;
 

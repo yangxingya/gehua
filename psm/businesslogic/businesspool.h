@@ -44,6 +44,8 @@ private:
     int getIdByCAId(caid_t caid);
     static uint64_t genTermSessionId(
         double time, uint16_t g_cnt, uint32_t ip, caid_t caid);
+    static uint16_t getCABytesByTermSessionId(uint64_t ts_id);
+    static uint16_t getCAbytesByCAId(caid_t caid);
 private:
     Logger &logger_;
     WorkPool wk_pool_;

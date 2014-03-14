@@ -41,7 +41,7 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="..\..\include"
+				AdditionalIncludeDirectories="..\..\include;..\..\include\libghttp"
 				PreprocessorDefinitions="WIN32;_DEBUG;_CONSOLE"
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
@@ -115,7 +115,7 @@
 				Name="VCCLCompilerTool"
 				Optimization="2"
 				EnableIntrinsicFunctions="true"
-				AdditionalIncludeDirectories="..\..\include"
+				AdditionalIncludeDirectories="..\..\include;..\..\include\libghttp"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
 				EnableFunctionLevelLinking="true"
@@ -173,7 +173,35 @@
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
 			<File
+				RelativePath=".\business_apply_server.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\http_request_processor.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\psm.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\sm_reuqest_process_svr.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\term_basic_func_svr.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\term_request_process_svr.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\work_svc_apply.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\work_terminal_impl.cpp"
 				>
 			</File>
 		</Filter>
@@ -191,7 +219,15 @@
 				>
 			</File>
 			<File
+				RelativePath=".\business_apply_server.h"
+				>
+			</File>
+			<File
 				RelativePath=".\comm-def.h"
+				>
+			</File>
+			<File
+				RelativePath=".\http_request_processor.h"
 				>
 			</File>
 			<File
@@ -199,7 +235,27 @@
 				>
 			</File>
 			<File
+				RelativePath=".\sm_reuqest_process_svr.h"
+				>
+			</File>
+			<File
+				RelativePath=".\term_basic_func_svr.h"
+				>
+			</File>
+			<File
+				RelativePath=".\term_request_process_svr.h"
+				>
+			</File>
+			<File
 				RelativePath=".\timeouttimer.h"
+				>
+			</File>
+			<File
+				RelativePath=".\work_def.h"
+				>
+			</File>
+			<File
+				RelativePath=".\work_svc_apply.h"
 				>
 			</File>
 		</Filter>
@@ -330,6 +386,142 @@
 			>
 			<File
 				RelativePath=".\config\config.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="protocol"
+			>
+			<File
+				RelativePath="..\..\include\protocol\protocol_cipher.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_common.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_general.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_cipher.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_common.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_general.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_pb.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_pb_common.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_pb_descriptor.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_pb_message.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_pt.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_pt_common.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_pt_descriptor.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\protocol\protocol_v2_pt_message.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="libghttp"
+			>
+			<File
+				RelativePath="..\..\include\libghttp\ghttp.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\ghttp.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\ghttp_constants.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_base64.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_base64.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_date.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_date.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_global.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_hdrs.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_hdrs.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_req.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_req.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_resp.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_resp.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_trans.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_trans.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_uri.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\include\libghttp\http_uri.h"
 				>
 			</File>
 		</Filter>

@@ -23,10 +23,11 @@ public:
 
     caid_t Id() const { return caid_; }
     size_t termCnt() const { return terminal_session_map_.size(); }
+
+    map<uint64_t, TermSession*> terminal_session_map_;
 private:
     caid_t caid_;
     TimeOutTimer& timeout_timer_;
-    map<uint64_t, TermSession*> terminal_session_map_;
 
     void OnAdd(TermConnection *tc);
     void OnRemove(TermConnection *tc);

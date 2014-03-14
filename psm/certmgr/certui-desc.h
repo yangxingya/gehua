@@ -25,25 +25,12 @@ using ::std::map;
 struct CertUiDescriptor 
 {
 private:
-
-    // portable... can't use macro to set coding easy
-    // todo:: who have best idea please email: yangxingya@novel-supertv.com
-#ifdef _MSC_VER
     #pragma pack(1)
-#endif // _MSC_VER
     struct buffer_t {
         uint8_t tag;
         uint16_t length;
-    }
-#ifdef _MSC_VER
-    ;
+    } ATTR_PACKED ;
     #pragma pack(1)
-#else // _MSC_VER
-# ifdef __GUNC__
-    __attribute__((packed));
-# endif // __GUNC__
-    ;
-#endif // !_MSC_VER
 
     buffer_t buffer;
     string user_info;

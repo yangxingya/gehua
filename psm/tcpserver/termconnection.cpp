@@ -44,7 +44,7 @@ void TermConnection::OnDataReceived()
                 break;  
             }
 
-            term_session_ = psm_ctx_->busi_pool_.GenTermSession((PtLoginRequest *)msg, this);
+            term_session_ = psm_ctx_->busi_pool_->GenTermSession((PtLoginRequest *)msg, this);
             if (term_session_ == NULL) {
                 LOG_WARN("[%s:TCP] 终端连接后第一个请求验证失败：%s, dump:\n%s", IdString().c_str(), GetPeerAddr().c_str(), recv_buffer_.DumpHex(16,true).c_str());
                 SetDirty();
@@ -53,19 +53,72 @@ void TermConnection::OnDataReceived()
             login_ = true;
         }
 
-        //todo:: work to add 
-        Work *wk; // = new ...;
-        //psm_ctx_->busi_pool_.Assign(wk, term_session_->CAId());
+        switch ( msg->msg_id_ )
+        {
+        case CLOUDv2_PT_TERM_LOGIN_REQUEST:      
+            {
+                PtLoginRequest *pkt = (PtLoginRequest*)msg;
+                psm_ctx_->term_request_process_svr_->AddLoginRequestWork(this, pkt);
+            }
 
-        /*
-        //business logic 
-        PtHeartbeatRequest* hb_msg = dynamic_cast<PtHeartbeatRequest*>(msg);
-        if ( hb_msg != NULL && hb_msg->test_data_desc_.valid_ ) {
-        last_heartbeat_time_ = get_up_time();
-        SendHeartbeatResponse( hb_msg->test_data_desc_.request_str_ );
+            break;
+        case CLOUDv2_PT_TERM_LOGOUT_REQUEST:                
+            {
+                PtLogoutRequest *pkt = (PtLogoutRequest*)msg;
+                psm_ctx_->term_request_process_svr_->AddLogoutRequestWork(this, pkt);
+            }
+
+            break;
+        case CLOUDv2_PT_TERM_HEARTBEAT_REQUEST:  
+            {
+                PtHeartbeatRequest *pkt = (PtHeartbeatRequest*)msg;
+                psm_ctx_->term_request_process_svr_->AddHeartbeatWork(this, pkt);
+            }
+
+            break;
+        case CLOUDv2_PT_TERM_SVCAPPLY_REQUEST:
+            {
+                PtSvcApplyRequest *pkt = (PtSvcApplyRequest *)msg;
+                psm_ctx_->term_request_process_svr_->AddSvcApplyWork(this, pkt);
+            }
+
+            break;
+        case CLOUDv2_PT_TERM_STATUSQUERY_REQUEST:
+            {
+                PtStatusQueryRequest *pkt = (PtStatusQueryRequest *)msg;
+                psm_ctx_->term_request_process_svr_->AddStatusQueryWork(this, pkt);
+            }
+
+            break;
+        case CLOUDv2_PT_TERM_KEYMAPPING_REQUEST:
+            {
+                PtKeyMappingRequest *pkt = (PtKeyMappingRequest *)msg;
+                psm_ctx_->term_basic_func_svr_->AddKeyTransmitWork(this, pkt);
+            }
+
+            break;
+        case CLOUDv2_PT_TERM_GETSVCGROUP_REQUEST:
+            {
+                PtGetSvcGroupRequest *pkt = (PtGetSvcGroupRequest *)msg;
+                psm_ctx_->term_request_process_svr_->AddGetSvrGroupWork(this, pkt);
+            }
+            break;
+
+        case CLOUDv2_PT_TERM_SVCSWITCH_RESPONSE:
+            {
+                PtSvcSwitchResponse *pkt = (PtSvcSwitchResponse *)msg;
+                psm_ctx_->term_basic_func_svr_->AddSvcSwitchNotifyWork(this, pkt);
+            }
+
+            break;
+        case CLOUDv2_PT_TERM_STATUSNOTIFY_RESPONSE:
+            {
+                PtStatusNotifyResponse *pkt = (PtStatusNotifyResponse *)msg;
+                psm_ctx_->term_basic_func_svr_->AddStatusPChangeNotifyWork(this, pkt);
+            }
+
+            break;
         }
-        delete msg;
-        */
     }
 }
 
@@ -75,7 +128,7 @@ int TermConnection::parsePacket( PtBase** msg, uint32_t* len )
 
     recv_buffer_.SetReadPtr(0);
     ret = PtBase::CheckCompleteness(recv_buffer_,*len);
-    if (ret < 0) {
+        if (ret < 0) {
         return -1;  //packet parse failed
     }
 
