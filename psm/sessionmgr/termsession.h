@@ -15,6 +15,10 @@
 #include <protocol/protocol_v2_pt_descriptor.h>
 #include <protocol/protocol_v2_pt.h>
 #include <protocol/protocol_v2_pt_message.h>
+#include <protocol/protocol_v2_pb_common.h>
+#include <protocol/protocol_v2_pb_descriptor.h>
+#include <protocol/protocol_v2_pb.h>
+#include <protocol/protocol_v2_pb_message.h>
 #include "../comm-def.h"
 #include "../bs-comm-def.h"
 #include "../certmgr/desc-common.h"
@@ -26,6 +30,8 @@ struct UserInfo;
 struct TermConnection;
 struct PtLoginRequest;
 struct CASession;
+struct BusinessStatusInfo;
+struct PB_SvcURLDescriptor;
 
 struct TermSession
 {
@@ -33,29 +39,36 @@ public:
     TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tconn);
     bool valid() const { return valid_; }
 public:
-    CASession *ca_session;
-    TermConnection *term_conn;
-    stack<string> back_url_stack;
+    CASession       *ca_session;
+    TermConnection  *term_conn;
 
-    BusinessStatus curr_status;
-    BusinessStatus last_status;
+    BusinessType            curr_busi_type;
+    BusinessType            last_busi_type;
 
-    ServiceGroup service_grp;
-    UserInfo user_info;
+    stack<string>           back_url_stack;
+    PB_SvcURLDescriptor     url_desc;
+
+    ServiceGroup    service_grp;
+    UserInfo        user_info;
 
     PT_OdcLibDescriptor       odclib_desc;        
     PT_UserInfoDescriptor     user_info_desc;     
     PT_UserCertDataDescriptor cert_data_desc;     
     PT_TerminalInfoDescriptor terminal_info_desc; 
 
+    PT_SessionInfoDescriptor  session_info_desc;    //TODO:需要根据配置文件设置
+
     uint64_t Id() const { return id_; }
     caid_t CAId() const { return caid_;}
-    void Id(uint64_t id) { id_ = id; }
+    void Id(uint64_t id) { id_ = id; terminal_info_desc.session_id_ = id_; }
+
+    void UpdateSessionInfo(PB_SvcURLDescriptor &url_desc);
+
 private:
-    uint64_t id_;
-    caid_t caid_;
-    bool valid_;
-    Logger &logger_;
+    uint64_t    id_;
+    caid_t      caid_;
+    bool        valid_;
+    Logger      &logger_;
 };
 
 #endif // !gethua_sessionmgr_terminal_session_h_

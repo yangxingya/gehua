@@ -44,7 +44,7 @@ void TermBasicFuncSvr::AddSvcSwitchNotifyWork( TermConnection *conn, PtSvcSwitch
 
 void TermBasicFuncSvr::AddSvcSwitchNotifyWork( TermConnection *conn, PtSvcSwitchResponse *pkg )
 {
-    //TODO:
+    //TODO: 暂时不关注应答
     delete pkg;
     return;
 }
@@ -64,7 +64,7 @@ void TermBasicFuncSvr::AddStatusPChangeNotifyWork( TermConnection *conn, PtStatu
 
 void TermBasicFuncSvr::AddStatusPChangeNotifyWork( TermConnection *conn, PtStatusNotifyResponse *pkg )
 {
-    //TODO:
+    //TODO: 暂时不关注应答
     delete pkg;
     return;
 }
@@ -132,13 +132,12 @@ void TNotifyWork_SvcSwitch::Func_Begin( Work *work )
     PSMContext *psm_context                = (PSMContext*)work->user_ptr_;
 
     // send notify to terminal.
-    svcswitch_work->run_step_ = TNotifyWork_SvcSwitch::SvcSwitch_SendNotify;
+    svcswitch_work->run_step_ = TNotifyWork_SvcSwitch::SvcSwitch_SendNotify;    
 
     ByteStream bs = svcswitch_work->pkg_->Serialize();
-    bs.Add(svcswitch_work->pkg_->svc_cross_url_desc_.Serialize());
-    bs.Add(svcswitch_work->pkg_->svc_self_url_desc_.Serialize());
-    bs.Add(svcswitch_work->pkg_->keymap_indicate_desc_.Serialize());
-    bs.Add(svcswitch_work->pkg_->test_data_desc_.Serialize());
+    if ( svcswitch_work->pkg_->svc_url_desc_.valid_ )           bs.Add(svcswitch_work->pkg_->svc_url_desc_.Serialize());
+    if ( svcswitch_work->pkg_->keymap_indicate_desc_.valid_ )   bs.Add(svcswitch_work->pkg_->keymap_indicate_desc_.Serialize());
+
     if ( svcswitch_work->session_info_->term_conn->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
     {
         // add responed process work.

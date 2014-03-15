@@ -235,6 +235,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\sm_config_info.h"
+				>
+			</File>
+			<File
 				RelativePath=".\sm_reuqest_process_svr.h"
 				>
 			</File>
@@ -333,6 +337,10 @@
 			Name="certmgr"
 			>
 			<File
+				RelativePath=".\certmgr\certdata.h"
+				>
+			</File>
+			<File
 				RelativePath=".\certmgr\certid-desc.h"
 				>
 			</File>
@@ -362,6 +370,10 @@
 			</File>
 			<File
 				RelativePath=".\certmgr\publickey-desc.h"
+				>
+			</File>
+			<File
+				RelativePath=".\certmgr\sign-desc.h"
 				>
 			</File>
 		</Filter>

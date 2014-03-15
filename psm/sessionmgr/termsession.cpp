@@ -4,10 +4,10 @@
 
 TermSession::TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tconn)
     : user_info(msg->user_info_desc_.user_info_)
-    , odclib_desc(msg->odclib_desc_)    
-    , user_info_desc(msg->user_info_desc_)    
-    , cert_data_desc(msg->cert_data_desc_)   
-    , terminal_info_desc(msg->terminal_info_desc_) 
+    , odclib_desc(msg->odclib_desc_)
+    , user_info_desc(msg->user_info_desc_)
+    , cert_data_desc(msg->cert_data_desc_)
+    , terminal_info_desc(msg->terminal_info_desc_)
     , term_conn(tconn), ca_session(0), valid_(false)
     , logger_(logger)
 {
@@ -32,6 +32,15 @@ TermSession::TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tc
     }
 
     caid_ = caid;
+
+    // 记录终端登录前所处的业务url
+    back_url_stack.push(terminal_info_desc.business_url_);
     
     //cert.
+}
+
+void TermSession::UpdateSessionInfo(PB_SvcURLDescriptor &url_desc)
+{
+    //更新会话URL信息
+    url_desc = url_desc;
 }

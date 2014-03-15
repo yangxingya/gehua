@@ -31,10 +31,28 @@ int BusinessApplySvr::GetSMServiceAddr( string &apply_business_name, string &add
 
 bool BusinessApplySvr::IsPHONEControlSvc( const char *apply_business_name )
 {
-    return (strcmp(apply_business_name, BUSINESS_PHONE_Control) == 0);
+    return (strcmp(apply_business_name, SERVICE_PhoneControl) == 0);
 }
 
 void BusinessApplySvr::AddInitRequestWork(SvcApplyWork *work)
 {
     http_request_processor_->AddHttpRequestWork(work);
+}
+
+BusinessType BusinessApplySvr::GetBusinessType( string service_name )
+{
+    if (service_name.compare(SERVICE_CloudGame) == 0)
+    {    
+        return BSGame;
+    }
+    if (service_name.compare(SERVICE_SVOD) == 0)
+    {    
+        return BSVOD;
+    }
+    if (service_name.compare(SERVICE_PhoneControl) == 0)
+    {    
+        return BSPhoneControl;
+    }    
+
+    return BSPending;
 }

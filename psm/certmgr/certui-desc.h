@@ -47,6 +47,8 @@ public:
         buffer.length = user_info.length();
     }
 
+    CertUiDescriptor() {}
+
     uint32_t length() const { return sizeof(buffer) + user_info.length(); }
 
     void maker(uint8_t *buff) const

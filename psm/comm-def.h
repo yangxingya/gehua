@@ -81,12 +81,11 @@ using ::std::string;
 using ::std::vector;
 using ::std::map;
 
-template<>
 inline string change_order(string const& t)
 {
     string dest;
     size_t len = t.length();
-    dest.reserve(len);
+    dest.resize(len);
 
     for (size_t i = 0; i < len; ++i)
         dest[i] = t[len - 1 - i];
@@ -217,6 +216,80 @@ inline uint32_t ip_cast(string const& ipstr)
     tmp.bs.t4 = (uint8_t)atoi(out[3].c_str());
 
     return tmp.value;
+}
+
+const string kHexArray = "0123456789ABCDEF";
+
+// change data array to hex string 
+// ex: 0x1357 ---> "1357"; 11 ---> "B"
+inline string hex_string(uint8_t *buf, size_t sz)
+{
+    string tmp;
+    tmp.resize(sz);
+
+    for (size_t i = 0; i < sz; ++i) {
+        tmp[i] = kHexArray[buf[i]];
+    }
+
+    return tmp;
+}
+
+const int kAto0Diff = 'A' - '0';
+const int kFto0Diff = 'F' - '0';
+const int kato0Diff = 'a' - '0';
+const int kfto0Diff = 'f' - '0';
+
+// change string to buffer array, 'a' & 'A' -> 0xa, 
+// loss case sensitivity <lower or higher to number> information
+inline size_t to_array(string const& arr, uint8_t *out)
+{
+    assert(out != 0);
+
+    uint8_t x;
+    size_t cnt = 0;
+    // it seperate to the following area:
+    //  (#, 0) 
+    //     [0, 9], (9, 'A'-'0'), 
+    //     ['A'-'0', 'F'-'0'], ('F'-'0', 'a'-'0'),
+    //     ['a'-'0', 'f'-'0'], 
+    //  ('f'-'0', #)
+    for (size_t i = 0; i < arr.length(); ++i) {
+        x = arr[i] - '0';
+
+        // (#, 0)
+        if (x < 0) continue;
+
+        // [0, 9]
+        if (x <= 9) {
+            out[i] = x;
+            cnt++;
+            continue;
+        }
+
+        // (9, 'A'-'0')
+        if (x < kAto0Diff) continue;
+
+        // ['A'-'0', 'F'-'0']
+        if (x <= kFto0Diff) {
+            out[i] = x- kAto0Diff + 10;
+            cnt++;
+            continue;
+        }
+
+        // ('F'-'0', 'a'-'0')
+        if (x < kato0Diff) continue;
+
+        // ['a'-'0', 'f'-'0']
+        if (x <= kfto0Diff) {
+            out[i] = x - kato0Diff + 10;
+            cnt++;
+            continue;
+        }
+
+        // ('f'-'0', #)
+    }
+
+    return cnt;
 }
 
 #endif //!gehua_common_define_h_

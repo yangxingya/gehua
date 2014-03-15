@@ -30,25 +30,22 @@ public:
         sm_addr_ = sm_addr;
     }
 
-    void SetRequestBody(PT_SvcSelfApplyDescriptor &svc_self_apply_desc, 
-        PT_UserInfoDescriptor &user_info_desc, 
-        PT_TerminalInfoDescriptor &terminal_info_desc,
+    void SetRequestBody(ByteStream &svc_self_apply_desc, 
+        ByteStream &user_info_desc, 
+        ByteStream &terminal_info_desc,
         string &psm_addr)
     {
         ByteStream bs;
         ByteStream tmp_bs;
 
         bs.Add("\r\nSvcApply=");
-        tmp_bs = svc_self_apply_desc.Serialize();
-        bs.Add(tmp_bs.DumpHex(tmp_bs.GetWritePtr(), false));
+        bs.Add(svc_self_apply_desc.DumpHex(svc_self_apply_desc.GetWritePtr(), false));
 
         bs.Add("\r\nUserInfo=");
-        tmp_bs = user_info_desc.Serialize();
-        bs.Add(tmp_bs.DumpHex(tmp_bs.GetWritePtr(), false));
+        bs.Add(user_info_desc.DumpHex(user_info_desc.GetWritePtr(), false));
 
         bs.Add("\r\nTerminalInfo=");
-        tmp_bs = terminal_info_desc.Serialize();
-        bs.Add(tmp_bs.DumpHex(tmp_bs.GetWritePtr(), false));
+        bs.Add(terminal_info_desc.DumpHex(terminal_info_desc.GetWritePtr(), false));
 
         bs.Add("\r\nPsm=");
         bs.Add(psm_addr);
@@ -58,35 +55,29 @@ public:
         request_body_ = bs;
     }
 
-    void SetRequestBody(PT_SvcCrossApplyDescriptor &svc_cross_apply_desc, 
-        PT_UserInfoDescriptor &user_info_desc, 
-        PT_TerminalInfoDescriptor &terminal_info_desc,
-        PT_UserInfoDescriptor &user_info_desc2, 
-        PT_TerminalInfoDescriptor &terminal_info_desc2,
+    void SetRequestBody(ByteStream &svc_cross_apply_desc, 
+        ByteStream &user_info_desc, 
+        ByteStream &terminal_info_desc,
+        ByteStream &user_info_desc2, 
+        ByteStream &terminal_info_desc2,
         string &psm_addr)
     {
         ByteStream bs;
-        ByteStream tmp_bs;
 
         bs.Add("\r\nSvcApply=");
-        tmp_bs = svc_cross_apply_desc.Serialize();
-        bs.Add(tmp_bs.DumpHex(tmp_bs.GetWritePtr(), false));
+        bs.Add(svc_cross_apply_desc.DumpHex(svc_cross_apply_desc.GetWritePtr(), false));
 
         bs.Add("\r\nUserInfo=");
-        tmp_bs = user_info_desc.Serialize();
-        bs.Add(tmp_bs.DumpHex(tmp_bs.GetWritePtr(), false));
+        bs.Add(user_info_desc.DumpHex(user_info_desc.GetWritePtr(), false));
 
         bs.Add("\r\nTerminalInfo=");
-        tmp_bs = terminal_info_desc.Serialize();
-        bs.Add(tmp_bs.DumpHex(tmp_bs.GetWritePtr(), false));
+        bs.Add(terminal_info_desc.DumpHex(terminal_info_desc.GetWritePtr(), false));
 
         bs.Add("\r\nUserInfo2nd=");
-        tmp_bs = user_info_desc2.Serialize();
-        bs.Add(tmp_bs.DumpHex(tmp_bs.GetWritePtr(), false));
+        bs.Add(user_info_desc2.DumpHex(user_info_desc2.GetWritePtr(), false));
 
         bs.Add("\r\nTerminalInfo2nd=");
-        tmp_bs = terminal_info_desc2.Serialize();
-        bs.Add(tmp_bs.DumpHex(tmp_bs.GetWritePtr(), false));
+        bs.Add(terminal_info_desc2.DumpHex(terminal_info_desc2.GetWritePtr(), false));
 
         bs.Add("\r\nPsm=");
         bs.Add(psm_addr);
@@ -95,7 +86,7 @@ public:
 
         request_body_ = bs;
     }
-
+ 
 public:
     ByteStream       request_url_;
     ByteStream       request_body_;
@@ -117,57 +108,6 @@ public:
  */
 struct SvcApplyWork : public Work
 {
-    SvcApplyWork(AioConnection *conn, 
-                 PtSvcApplyRequest *pkg, 
-                 TermSession *self_session_info)
-    {
-        apply_type_             = SelfSvcApply;
-        conn_                   = conn;
-        pkg_                    = pkg;
-        self_session_info_      = self_session_info;
-
-        run_step_               = SvcApply_Begin;
-        apply_sucess_           = false;
-
-        work_func_              = SvcApplyWork::Func_Begin;
-    }
-
-    SvcApplyWork(AioConnection *conn, 
-                 PtSvcApplyRequest *pkg, 
-                 TermSession *self_session_info, 
-                 TermSession *cross_session_info)
-    {
-        apply_type_             = CorssSvcApply;
-        conn_                   = conn;
-        pkg_                    = pkg;
-        self_session_info_      = self_session_info;
-        cross_session_info_     = cross_session_info;
-
-        run_step_               = SvcApply_Begin;
-        apply_sucess_           = false;
-
-        work_func_              = SvcApplyWork::Func_Begin;
-    }
-
-    static int SendErrorResponed(AioConnection *conn, unsigned int ret_code)
-    {
-        // 参数错误，直接给终端应答
-        PtSvcApplyResponse response(ret_code, 0);
-        ByteStream response_pkg = response.Serialize();
-        if ( conn->Write((unsigned char*)response_pkg.GetBuffer(), response_pkg.Size()) )
-        {
-            //TODO:
-            return 0;
-        }
-
-        return -1;
-    }
-
-    virtual ~SvcApplyWork()
-    {
-        if ( pkg_ != NULL ) delete pkg_;
-    }
-
     enum SvcApplyRunStep{
         SvcApply_Begin = 0,
         SvcApply_Init_begin,
@@ -182,12 +122,6 @@ struct SvcApplyWork : public Work
         CorssSvcApply
     };
 
-    static void Func_Begin(Work *work);
-    static void Func_Inited( Work *work );
-    static void Func_SendResponse(Work *work);
-    static void Func_End(Work *work);
-
-public:
     SvcApplyType                apply_type_;
     SvcApplyRunStep             run_step_;
     TermSession                 *cross_session_info_;
@@ -195,33 +129,60 @@ public:
     HTTPAysnRequestInfo         http_request_info_;
     bool                        apply_sucess_;
     AioConnection               *conn_;
+};
+
+/**
+ * @brief  终端业务申请工作项定义
+ */
+struct TermSvcApplyWork : public SvcApplyWork
+{
+    TermSvcApplyWork(AioConnection *conn, 
+                 PtSvcApplyRequest *pkg, 
+                 TermSession *self_session_info);
+
+    TermSvcApplyWork(AioConnection *conn, 
+                 PtSvcApplyRequest *pkg, 
+                 TermSession *self_session_info, 
+                 TermSession *cross_session_info);
+
+    static int SendErrorResponed(AioConnection *conn, unsigned int ret_code);
+
+    virtual ~TermSvcApplyWork();
+
+    static void Func_Begin(Work *work);
+    static void Func_Inited(Work *work);
+    static void Func_End(Work *work);
+
+public:
     PtSvcApplyRequest           *pkg_;
 };
 
 /***************************SM终端业务申请请求处理工作任务**********************************/
 
 /**
- * @brief  SM终端业务申请请求处理工作项定义
+ * @brief  终端业务申请工作项定义
  */
-// struct SMRequestWork_SvcApply : public SvcApplyWork
-// {
-//     PbSvcApplyRequest   *pkg_;
-//     BusiConnection      *busi_conn_;
-// 
-//     SMRequestWork_SvcApply()
-//     {
-//         pkg_                = NULL;
-//         busi_conn_          = NULL;
-//     }
-//     ~SMRequestWork_SvcApply()
-//     {
-//         if ( pkg_ != NULL )  delete pkg_;
-//     }
-// 
-//     static void Func_Begin(Work *work);
-//     static void Func_SendResponse(Work *work);
-//     static void Func_End(Work *work);
-// };
+struct SMSvcApplyWork : public SvcApplyWork
+{
+    SMSvcApplyWork(AioConnection *conn, 
+                 PbSvcApplyRequest *pkg, 
+                 TermSession *self_session_info);
 
+    SMSvcApplyWork(AioConnection *conn, 
+                 PbSvcApplyRequest *pkg, 
+                 TermSession *self_session_info, 
+                 TermSession *cross_session_info);
+
+    static int SendResponed(AioConnection *conn, PbSvcApplyRequest *pkg, unsigned int ret_code);
+
+    virtual ~SMSvcApplyWork();
+
+    static void Func_Begin(Work *work);
+    static void Func_Inited( Work *work );
+    static void Func_End(Work *work);
+
+public:
+    PbSvcApplyRequest           *pkg_;
+};
 
 #endif

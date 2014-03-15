@@ -18,11 +18,7 @@ void TRequestWork_Login::Func_Begin( Work *work )
     login_work->run_step_ = TRequestWork_Login::Login_SendResponse;
 
     PtLoginResponse login_response;
-    login_response.session_info_desc_.session_id_ = session_info->Id();
-    //TODO:
-    login_response.session_info_desc_.agreement_key_;
-    login_response.session_info_desc_.interval_time_;
-    login_response.session_info_desc_.timeout_;
+    login_response.session_info_desc_ = login_work->session_info_->session_info_desc;
 
     ByteStream responed_pkg = login_response.Serialize();
     responed_pkg.Add(login_response.session_info_desc_.Serialize());
@@ -35,7 +31,7 @@ void TRequestWork_Login::Func_Begin( Work *work )
     }
     else
     {
-        //TODO:
+        //TODO: 暂时默认发送成功
     }
 
     TRequestWork_Login::Func_End(work);
@@ -77,7 +73,7 @@ void TRequestWork_Logout::Func_Begin( Work *work )
     ByteStream responed_pkg = logout_response.Serialize();
     if ( !term_conn->Write((unsigned char*)responed_pkg.GetBuffer(), responed_pkg.GetWritePtr()) )
     {
-        // TODO:
+        // TODO:暂时默认发送成功
     }    
 
     TRequestWork_Logout::Func_End(work);
@@ -109,7 +105,7 @@ void TRequestWork_Heartbeat::Func_Begin( Work *work )
     ByteStream responed_pkg = heartbeat_response.Serialize();
     if ( !heartbeat_work->session_info_->term_conn->Write((unsigned char*)responed_pkg.GetBuffer(), responed_pkg.GetWritePtr()) )
     {
-        // TODO:
+        // TODO:暂时默认发送成功
     }
 
     TRequestWork_Heartbeat::Func_End(work);
@@ -149,7 +145,7 @@ void TRequestWork_StatusQuery::Func_Begin( Work *work )
     ByteStream response_pkg = notifyquery_response.Serialize();
     if ( !statusquery_work->session_info_->term_conn->Write((unsigned char*)response_pkg.GetBuffer(), response_pkg.Size()) )
     {
-        //TODO:
+        //TODO:暂时默认发送成功
     }
 
     TRequestWork_StatusQuery::Func_End(work);
@@ -189,7 +185,7 @@ void TRequestWork_GetSvcGroup::Func_Begin( Work *work )
     ByteStream response_pkg = getsvcgroup_response.Serialize();
     if ( !getsvcgroup_work->session_info_->term_conn->Write((unsigned char*)response_pkg.GetBuffer(), response_pkg.Size()) )
     {
-        //TODO:
+        //TODO:暂时默认发送成功
     }
 
     TRequestWork_StatusQuery::Func_End(work);

@@ -26,6 +26,8 @@ public:
      */
     int GetSMServiceAddr(string &apply_business_name, string &addr_str);
 
+    BusinessType  GetBusinessType(string service_name);
+
     /**
      * @brief 判断要申请的业务是否为手机外设业务
      * @param   apply_business_name  要申请业务的名称

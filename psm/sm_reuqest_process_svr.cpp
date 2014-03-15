@@ -28,7 +28,7 @@ void SMRequestProcessSvr::AddTermSyncWork( BusiConnection *conn, PbTermSyncReque
     bs.Add(termsync_response.test_data_desc_.Serialize());
     if ( !conn->Write((unsigned char*)bs.GetBuffer(), bs.GetWritePtr()) )
     {
-        //TODO:
+        //TODO: 暂时默认发送成功
     }
 
     delete pkg;
@@ -48,7 +48,7 @@ void SMRequestProcessSvr::AddTermReportWork( BusiConnection *conn, PbTermReportR
     if ( termreport_response.test_data_desc_.valid_ ) bs.Add(termreport_response.test_data_desc_.Serialize());
     if ( !conn->Write((unsigned char*)bs.GetBuffer(), bs.GetWritePtr()) )
     {
-        //TODO:
+        //TODO:暂时默认发送成功
     }
 
     delete pkg;
@@ -68,7 +68,7 @@ void SMRequestProcessSvr::AddSvcPChangeWork( BusiConnection *conn, PbSvcPChangeR
     bs.Add(svcpchange_response.test_data_desc_.Serialize());
     if ( !conn->Write((unsigned char*)bs.GetBuffer(), bs.GetWritePtr()) )
     {
-        //TODO:
+        //TODO:暂时默认发送成功
     }
 
     delete pkg;
@@ -76,20 +76,51 @@ void SMRequestProcessSvr::AddSvcPChangeWork( BusiConnection *conn, PbSvcPChangeR
 
 void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyRequest *pkg )
 {
-    //TODO:
-
-    //send responed.
-    PbSvcApplyResponse svcapply_response;
-    svcapply_response.sequence_no_desc_ = pkg->sequence_no_desc_;
-    svcapply_response.test_data_desc_   = pkg->test_data_desc_;
-
-    ByteStream bs(svcapply_response.Serialize());
-    bs.Add(svcapply_response.sequence_no_desc_.Serialize());
-    bs.Add(svcapply_response.test_data_desc_.Serialize());
-    if ( !conn->Write((unsigned char*)bs.GetBuffer(), bs.GetWritePtr()) )
+    unsigned int ret_code = PS_RC_MSG_FORMAT_ERROR;
+    do 
     {
-        //TODO:
-    }
+        SMSvcApplyWork *svcapply_work = NULL;
+
+        TermSession *self_session   = NULL;
+        TermSession *cross_session  = NULL;
+        if ( pkg->svc_self_apply_desc_.valid_ )
+        {
+            self_session = psm_context_->busi_pool_->FindTermSessionById(pkg->svc_self_apply_desc_.session_id_);
+            if ( self_session == NULL )
+            {
+                ret_code = PS_RC_MSG_FORMAT_ERROR;
+                break;
+            }
+
+            svcapply_work = new SMSvcApplyWork(conn, pkg, self_session);
+        }
+        else if ( pkg->svc_cross_apply_desc_.valid_ )
+        {
+            self_session   = psm_context_->busi_pool_->FindTermSessionById(pkg->svc_cross_apply_desc_.init_session_id_);
+            cross_session  = psm_context_->busi_pool_->FindTermSessionById(pkg->svc_cross_apply_desc_.show_session_id_);
+            if ( self_session == NULL || cross_session == NULL )
+            {
+                ret_code = PS_RC_MSG_FORMAT_ERROR;
+                break;
+            }
+
+            svcapply_work = new SMSvcApplyWork(conn, pkg, self_session, cross_session);
+        }
+        else
+        {
+            ret_code = PS_RC_MSG_FORMAT_ERROR;
+            break;
+        }        
+
+        svcapply_work->user_ptr_    = psm_context_;
+        svcapply_work->work_func_   = SMSvcApplyWork::Func_Begin;
+
+        psm_context_->busi_pool_->AddWork(svcapply_work, self_session->CAId());
+        return;
+    } while (0);
+
+    // 参数错误，直接给终端应答
+    SMSvcApplyWork::SendResponed(conn, pkg, ret_code);
 
     delete pkg;
 }
@@ -131,7 +162,7 @@ int SMRequestProcessSvr::UpdateTermParam( PbSvcPChangeRequest *pkg )
     for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
     {
         //只给在PhoneControl业务中的终端发送业务切换通知
-        if ( iter->second->curr_status == BusinessStatus::BSPhoneControl )
+        if ( iter->second->curr_busi_type == BSPhoneControl )
         {
             PtSvcSwitchRequest *svcswitch_pkg = new PtSvcSwitchRequest;
             svcswitch_pkg->keymap_indicate_desc_ = pkg->key_map_indicate_desc_;

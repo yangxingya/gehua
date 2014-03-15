@@ -24,23 +24,22 @@ private:
     struct buffer_t {
         uint8_t tag;
         uint16_t length;
-        uint8_t e[4];
-        uint8_t n[128];
+        uint8_t time[7];
     } ATTR_PACKED ;
     #pragma pack(1)
 
     buffer_t buffer;
 public:
-    ExpireTimeDescriptor(uint8_t e[4], uint8_t n[128])
+    ExpireTimeDescriptor(uint8_t time[7])
     {
-        assert(e != 0);
-        assert(n != 0);
+        assert(time != 0);
 
         buffer.tag = TagExpireTimeDesc;
-        buffer.length = sizeof(buffer.e) + sizeof(buffer.n);
-        memcpy(buffer.e, e, sizeof(buffer.e));
-        memcpy(buffer.n, n, sizeof(buffer.n));
+        buffer.length = sizeof(buffer.time);
+        memcpy(buffer.time, time, sizeof(buffer.time));
     }
+
+    ExpireTimeDescriptor() {}
 
     uint32_t length() const { return sizeof(buffer); }
 
@@ -51,13 +50,11 @@ public:
         buffer_t buf;
         buf.tag = buffer.tag;
         buf.length = buffer.length;
-        memcpy(buf.e, buffer.e, sizeof(buffer.e));
-        memcpy(buf.n, buffer.n, sizeof(buffer.n));
+        memcpy(buf.time, buffer.time, sizeof(buffer.time));
         if (g_byteorder == OrderLittleEndian) {
             buf.tag = buffer.tag;
             buf.length = change_order(buffer.length);
-            change_order(buf.e);
-            change_order(buf.n);
+            change_order(buf.time);
         } 
 
         memcpy(buff, &buf, sizeof(buf));

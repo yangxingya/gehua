@@ -6,13 +6,7 @@
 #include <map>
 using namespace std;
 
-
-/**
- * @brief  协议头定义
- */
-#define BUSINESS_SVOD           "SuperVOD"
-#define BUSINESS_CloudGame      "CyberCloud"
-#define BUSINESS_PHONE_Control  "PhoneControl"
+#include "bs-comm-def.h"
 
 
 /**

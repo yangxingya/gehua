@@ -42,6 +42,8 @@ public:
         buffer.length = sizeof(buffer.id) + this->name.length() + 1;
     }
 
+    OperatorInfoDescriptor() {}
+
     uint32_t length() const { return buffer.length + 3; }
 
     void maker(uint8_t *buff) const

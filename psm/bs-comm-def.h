@@ -13,9 +13,17 @@
 
 using ::std::string;
 
+/**
+ * @brief  协议头定义
+ */
+#define SERVICE_SVOD           "SuperVOD"
+#define SERVICE_CloudGame      "CyberCloud"
+#define SERVICE_PhoneControl   "PhoneControl"
+
+
 // Business page status, 
 // read from config.
-enum BusinessStatus 
+enum BusinessType 
 {
     BSBase = 1,
     BSPortal = 2,

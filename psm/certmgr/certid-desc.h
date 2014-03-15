@@ -31,12 +31,16 @@ private:
 
     buffer_t buffer;
 public:
+    CertIdDescriptor() {}
+
     CertIdDescriptor(uint64_t id)
     {
         buffer.tag = TagCertIdDesc;
         buffer.length = sizeof(buffer.id);
         buffer.id = id;
     }
+
+    uint64_t id() const { return buffer.id; }
 
     uint32_t length() const { return sizeof(buffer); }
 
