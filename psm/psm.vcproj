@@ -336,46 +336,6 @@
 		<Filter
 			Name="certmgr"
 			>
-			<File
-				RelativePath=".\certmgr\certdata.h"
-				>
-			</File>
-			<File
-				RelativePath=".\certmgr\certid-desc.h"
-				>
-			</File>
-			<File
-				RelativePath=".\certmgr\certmgr.cpp"
-				>
-			</File>
-			<File
-				RelativePath=".\certmgr\certmgr.h"
-				>
-			</File>
-			<File
-				RelativePath=".\certmgr\certui-desc.h"
-				>
-			</File>
-			<File
-				RelativePath=".\certmgr\desc-common.h"
-				>
-			</File>
-			<File
-				RelativePath=".\certmgr\expiretime-desc.h"
-				>
-			</File>
-			<File
-				RelativePath=".\certmgr\operatori-desc.h"
-				>
-			</File>
-			<File
-				RelativePath=".\certmgr\publickey-desc.h"
-				>
-			</File>
-			<File
-				RelativePath=".\certmgr\sign-desc.h"
-				>
-			</File>
 		</Filter>
 		<Filter
 			Name="businesslogic"

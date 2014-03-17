@@ -21,6 +21,8 @@ void BusinessPool::AddWork(Work *wk, caid_t caid)
         logger_.Warn("PSM Business Pool have stoped, but add work, caid is: %d", caid);
         return;
     }
+    
+    wk_pool_.Assign(wk, getIdByCAId(caid));
 }
 
 void BusinessPool::AddDelayedWork(DelayedWork *delay_wk, caid_t caid)
@@ -29,6 +31,8 @@ void BusinessPool::AddDelayedWork(DelayedWork *delay_wk, caid_t caid)
         logger_.Warn("PSM Business Pool have stoped, but add delay work, caid is: %d", caid);
         return;
     }
+
+    wk_pool_.Assign(delay_wk, getIdByCAId(caid));
 }
 
 
@@ -175,6 +179,14 @@ void BusinessPool::Stop()
 TermSession* BusinessPool::FindTermSessionById(uint64_t ts_id)
 {
     CASessionMgr *csmgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(ts_id)];
+
+    CASession *cs = csmgr->FindCASessionByTermSessionId(ts_id);
+    if (cs == NULL) return NULL;
     
-    return NULL;
+    map<uint64_t, TermSession*>::iterator 
+        it = cs->terminal_session_map_.find(ts_id);
+    if (it == cs->terminal_session_map_.end())
+        return NULL;
+ 
+    return it->second;
 }

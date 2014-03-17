@@ -18,7 +18,7 @@
 #include <cpplib/netaio/aiosender.h>
 #include <cpplib/netaio/aiomanager.h>
 #include "../timeouttimer.h"
-#include "../comm-def.h"
+#include "../../common/widget.h"
 #include "busiconnection.h"
 
 using ::std::list;

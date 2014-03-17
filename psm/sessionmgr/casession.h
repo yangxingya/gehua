@@ -7,7 +7,7 @@
 #define gehua_sessionmgr_ca_session_h_
 
 #include <map>
-#include "../comm-def.h"
+#include "../../common/widget.h"
 
 using ::std::map;
 

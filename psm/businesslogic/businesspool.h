@@ -8,7 +8,7 @@
 
 #include <vector>
 #include <cpplib/logger.h>
-#include "../comm-def.h"
+#include "../../common/widget.h"
 #include "../sessionmgr/casession.h"
 #include "../sessionmgr/casessionmgr.h"
 #include "workpool.h"

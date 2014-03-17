@@ -14,7 +14,7 @@
 #include <cpplib/netaio/aioreceiver.h>
 #include <cpplib/netaio/aiosender.h>
 #include <cpplib/netaio/aiomanager.h>
-#include "../comm-def.h"
+#include "../../common/widget.h"
 #include "termconnection.h"
 
 struct PSMContext;

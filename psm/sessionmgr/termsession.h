@@ -19,9 +19,9 @@
 #include <protocol/protocol_v2_pb_descriptor.h>
 #include <protocol/protocol_v2_pb.h>
 #include <protocol/protocol_v2_pb_message.h>
-#include "../comm-def.h"
+#include "../../common/widget.h"
 #include "../bs-comm-def.h"
-#include "../certmgr/desc-common.h"
+#include "../../common/auth/desc-common.h"
 
 using ::std::stack;
 using ::std::string;
@@ -31,7 +31,7 @@ struct TermConnection;
 struct PtLoginRequest;
 struct CASession;
 struct BusinessStatusInfo;
-struct PB_SvcURLDescriptor;
+//struct PB_SvcURLDescriptor;
 
 struct TermSession
 {
