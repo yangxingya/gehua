@@ -15,19 +15,32 @@ void TRequestWork_Login::Func_Begin( Work *work )
     CASession   *ca_session_info    = login_work->session_info_->ca_session;
     
     // send response to terminal.
+
     login_work->run_step_ = TRequestWork_Login::Login_SendResponse;
 
     PtLoginResponse login_response;
-    login_response.session_info_desc_ = login_work->session_info_->session_info_desc;
+
+    login_response.Add(login_work->session_info_->session_info_desc);
+    if ( login_work->pkg_->test_data_desc_.valid_ )
+    {
+        PT_TestDataDescriptor test_data_desc(login_work->pkg_->test_data_desc_.request_str_, to_string("%.3lf",get_up_time()));
+        login_response.Add(test_data_desc);
+    }
 
     ByteStream responed_pkg = login_response.Serialize();
-    responed_pkg.Add(login_response.session_info_desc_.Serialize());
 
-    if ( session_info->term_conn->Write((unsigned char*)responed_pkg.GetBuffer(), responed_pkg.GetWritePtr()) )
+    psm_context->logger_.Trace("[终端登录请求][CAID=%I64d][SID=%I64d] 向终端发送应答。应答包长度：%d  内容：\n%s", 
+                                session_info->CAId(), session_info->Id(),
+                                responed_pkg.Size(),
+                                stringtool::to_hex_string((const char*)responed_pkg.GetBuffer(), responed_pkg.Size()).c_str());
+
+    if ( session_info->term_conn->Write(responed_pkg.GetBuffer(), responed_pkg.Size()) )
     {
         // notify relate terminal status changed.
+        psm_context->logger_.Trace("[终端登录请求][CAID=%I64d][SID=%I64d] 向终端发送应答成功, 开始创建通知关联终端状态变更通知工作任务...");
+
         login_work->run_step_ = TRequestWork_Login::Login_NotifyStatusChanged;
-        psm_context->term_basic_func_svr_->NotifyAllTerminalStatusPChanged(ca_session_info);
+        //psm_context->term_basic_func_svr_->NotifyAllTerminalStatusPChanged(ca_session_info);
     }
     else
     {
@@ -60,6 +73,11 @@ void TRequestWork_Logout::Func_Begin( Work *work )
     CASession       *ca_session  = logout_work->session_info_->ca_session;
     TermConnection  *term_conn   = logout_work->session_info_->term_conn;
 
+    uint64_t    caid_id         = logout_work->session_info_->CAId();
+    uint64_t    term_session_id = logout_work->session_info_->Id();
+
+    psm_context->logger_.Trace("[终端退出请求][CAID=%I64d][SID=%I64d] 删除会话，并通知其他关联终端状态变更...", caid_id, term_session_id);
+
     if ( psm_context->busi_pool_->DelTermSession(logout_work->session_info_) > 0 )
     {
         // notify other terminal status changed.
@@ -70,8 +88,20 @@ void TRequestWork_Logout::Func_Begin( Work *work )
     logout_work->run_step_ = TRequestWork_Logout::Logout_SendResponse;
 
     PtLogoutResponse logout_response;
+    if ( logout_work->pkg_->test_data_desc_.valid_ )
+    {
+        PT_TestDataDescriptor test_data_desc(logout_work->pkg_->test_data_desc_.request_str_, to_string("%.3lf",get_up_time()));
+        logout_response.Add(test_data_desc);
+    }
+
     ByteStream responed_pkg = logout_response.Serialize();
-    if ( !term_conn->Write((unsigned char*)responed_pkg.GetBuffer(), responed_pkg.GetWritePtr()) )
+
+    psm_context->logger_.Trace("[终端退出请求][CAID=%I64d][SID=%I64d] 向终端发送应答. 长度：%d  内容：\n%s", 
+                                caid_id, term_session_id,
+                                responed_pkg.Size(),
+                                stringtool::to_hex_string((const char*)responed_pkg.GetBuffer(), responed_pkg.Size()).c_str());
+
+    if ( !term_conn->Write(responed_pkg.GetBuffer(), responed_pkg.Size()) )
     {
         // TODO:暂时默认发送成功
     }    
@@ -102,7 +132,19 @@ void TRequestWork_Heartbeat::Func_Begin( Work *work )
     heartbeat_work->run_step_ = TRequestWork_Heartbeat::Heartbeat_SendResponse;
 
     PtHeartbeatResponse heartbeat_response;
+    if ( heartbeat_work->pkg_->test_data_desc_.valid_ )
+    {
+        PT_TestDataDescriptor test_data_desc(heartbeat_work->pkg_->test_data_desc_.request_str_, to_string("%.3lf",heartbeat_work->session_info_->term_conn->last_heartbeat_time_));
+        heartbeat_response.Add(test_data_desc);
+    }
+
     ByteStream responed_pkg = heartbeat_response.Serialize();
+
+    psm_context->logger_.Trace("[终端心跳请求][CAID=%I64d][SID=%I64d] 向终端发送应答. 长度：%d  内容：\n%s", 
+                                heartbeat_work->session_info_->CAId(), heartbeat_work->session_info_->Id(),
+                                responed_pkg.Size(),
+                                stringtool::to_hex_string((const char*)responed_pkg.GetBuffer(), responed_pkg.Size()).c_str());
+
     if ( !heartbeat_work->session_info_->term_conn->Write((unsigned char*)responed_pkg.GetBuffer(), responed_pkg.GetWritePtr()) )
     {
         // TODO:暂时默认发送成功
@@ -138,11 +180,21 @@ void TRequestWork_StatusQuery::Func_Begin( Work *work )
     map<uint64_t, TermSession*>::iterator iter = ca_session->terminal_session_map_.begin();
     for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
     {
-        notifyquery_response.terminal_list_desc_.push_back(iter->second->terminal_info_desc);
         notifyquery_response.Add(iter->second->terminal_info_desc);
+    }
+    if ( statusquery_work->pkg_->test_data_desc_.valid_ )
+    {
+        PT_TestDataDescriptor test_data_desc(statusquery_work->pkg_->test_data_desc_.request_str_, to_string("%.3lf",get_up_time()));
+        notifyquery_response.Add(test_data_desc);
     }
 
     ByteStream response_pkg = notifyquery_response.Serialize();
+
+    psm_context->logger_.Trace("[终端状态查询请求][CAID=%I64d][SID=%I64d] 向终端发送应答. 长度：%d  内容：\n%s", 
+                                statusquery_work->session_info_->CAId(), statusquery_work->session_info_->Id(),
+                                response_pkg.Size(),
+                                stringtool::to_hex_string((const char*)response_pkg.GetBuffer(), response_pkg.Size()).c_str());
+
     if ( !statusquery_work->session_info_->term_conn->Write((unsigned char*)response_pkg.GetBuffer(), response_pkg.Size()) )
     {
         //TODO:暂时默认发送成功
@@ -182,7 +234,20 @@ void TRequestWork_GetSvcGroup::Func_Begin( Work *work )
     getsvcgroup_response.Add(getsvcgroup_response.sg_id_desc_);
     getsvcgroup_response.Add(getsvcgroup_response.sg_indicate_desc_);
 
+    if ( getsvcgroup_work->pkg_->test_data_desc_.valid_ )
+    {
+        PT_TestDataDescriptor test_data_desc(getsvcgroup_work->pkg_->test_data_desc_.request_str_, to_string("%.3lf",get_up_time()));
+        getsvcgroup_response.Add(test_data_desc);
+    }
+
     ByteStream response_pkg = getsvcgroup_response.Serialize();
+
+    psm_context->logger_.Trace("[终端获取服务分组请求][CAID=%I64d][SID=%I64d] 向终端发送应答. 长度：%d  内容：\n%s", 
+                                getsvcgroup_work->session_info_->CAId(), getsvcgroup_work->session_info_->Id(),
+                                response_pkg.Size(),
+                                stringtool::to_hex_string((const char*)response_pkg.GetBuffer(), response_pkg.Size()).c_str());
+
+
     if ( !getsvcgroup_work->session_info_->term_conn->Write((unsigned char*)response_pkg.GetBuffer(), response_pkg.Size()) )
     {
         //TODO:暂时默认发送成功

@@ -17,48 +17,50 @@
 #include <assert.h>
 #include "desc-common.h"
 
-struct ExpireTimeDescriptor 
+struct ExpireTimeDescriptor : public DescBase 
 {
-private:
-    #pragma pack(1)
-    struct buffer_t {
-        uint8_t tag;
-        uint16_t length;
-        uint8_t time[7];
-    } ATTR_PACKED ;
-    #pragma pack(1)
+    uint8_t time_[7];
 
-    buffer_t buffer;
-public:
     ExpireTimeDescriptor(uint8_t time[7])
     {
         assert(time != 0);
 
-        buffer.tag = TagExpireTimeDesc;
-        buffer.length = sizeof(buffer.time);
-        memcpy(buffer.time, time, sizeof(buffer.time));
+        tag_ = TagExpireTimeDesc;
+        length_ = sizeof(time_);
+        memcpy(time_, time, sizeof(time_));
     }
 
-    ExpireTimeDescriptor() {}
-
-    uint32_t length() const { return sizeof(buffer); }
-
-    void maker(uint8_t *buff) const
+    ExpireTimeDescriptor() 
     {
-        assert(buff != 0);
+        tag_ = TagExpireTimeDesc;
+        length_ = sizeof(time_);
+        memset(time_, 0, sizeof(time_));
+    }
 
-        buffer_t buf;
-        buf.tag = buffer.tag;
-        buf.length = buffer.length;
-        memcpy(buf.time, buffer.time, sizeof(buffer.time));
-        if (g_byteorder == OrderLittleEndian) {
-            buf.tag = buffer.tag;
-            buf.length = change_order(buffer.length);
-            change_order(buf.time);
-        } 
+    virtual ByteStream getStream() 
+    {
+        ByteStream bs;
+        bs.SetByteOrder(NETWORK_BYTEORDER);
 
-        memcpy(buff, &buf, sizeof(buf));
+        bs.PutUint8(tag_);
+        bs.PutUint16(length_);
+
+        // todo:: 
+        bs.Add(time_, sizeof(time_));
+
+        return bs;
+    }
+    bool operator==(ExpireTimeDescriptor const& rhs)
+    {
+        return !memcmp(time_, rhs.time_, sizeof(time_));
+    }
+
+    bool operator!=(ExpireTimeDescriptor const& rhs)
+    {
+        return !(*this == rhs);
     }
 };
+
+
 
 #endif // !gehua_certmgr_expiretime_desc_h_

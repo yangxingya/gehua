@@ -87,12 +87,12 @@ void HttpRequestThread::SendHttpRequest( SvcApplyWork *work )
             break;
         }
 
-        if ( ghttp_set_body(request_, (char*)(work->http_request_info_.request_body_.GetBuffer()), work->http_request_info_.request_body_.GetWritePtr()) < 0 )
+        if ( ghttp_set_type(request_, ghttp_type_post) < 0 )
         {
             break;
         }
 
-        if ( ghttp_set_type(request_, ghttp_type_post) < 0 )
+        if ( ghttp_set_body(request_, (char*)(work->http_request_info_.request_body_.GetBuffer()), work->http_request_info_.request_body_.GetWritePtr()) < 0 )
         {
             break;
         }

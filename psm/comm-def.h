@@ -6,29 +6,15 @@
 #if !defined gehua_common_define_h_
 #define gehua_common_define_h_
 
-#ifdef _WIN32
-# include <winsock2.h>
-#else // _WIN32
-# ifdef __linux__
-
-# endif // __linux__
-#endif // !_WIN32
-
-#include <string>
-#include <vector>
-#include <map>
-
 #ifdef _MSC_VER
 # include <cpplib/cpplibbase.h>  //for type define uint<xx>_t;
 # define U64T  "%I64u"  //for unsigned __int64 printf format.
 # define S64T  "%I64d"  //for __int64 printf format.
-# define ATTR_PACKED 
  typedef unsigned __int64 caid_t;
 #else // _MSC_VER
 # ifdef __GUNC__
 #  define U64T "%llu"
 #  define S64T "%lld"
-#  define ATTR_PACKED __attribute__((packed))
    typedef uint64_t caid_t;
 # endif // __GUNC__
 #endif // !_MSC_VER
@@ -128,7 +114,7 @@ inline size_t split(string const& str, string const& sp1,
             break;
         }
 
-        kv_map[strvec[i].substr(0, pos - 1)] = strvec[i].substr(pos + sp2.length());
+        kv_map[strvec[i].substr(0, pos)] = strvec[i].substr(pos + sp2.length());
     }
 
     *out = kv_map;
@@ -195,7 +181,6 @@ inline uint32_t ip_cast(string const& ipstr)
     if (out.size() != 4)
         return 0;
 
-    #pragma pack(1)
     union tmp_t {
         struct {
             uint8_t t1;
@@ -204,8 +189,7 @@ inline uint32_t ip_cast(string const& ipstr)
             uint8_t t4;
         } bs;
         uint32_t value;
-    } ATTR_PACKED ;
-    #pragma pack(1)
+    };
 
 
     tmp_t tmp;

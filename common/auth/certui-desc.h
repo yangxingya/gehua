@@ -22,50 +22,63 @@
 using ::std::string;
 using ::std::map;
 
-struct CertUiDescriptor 
+struct CertUiDescriptor : public DescBase
 {
-private:
-    #pragma pack(1)
-    struct buffer_t {
-        uint8_t tag;
-        uint16_t length;
-    } ATTR_PACKED ;
-    #pragma pack(1)
+    string user_info_;
 
-    buffer_t buffer;
-    string user_info;
-public:
     CertUiDescriptor(map<string, string> const& ui_kv_pair)
     {
-        buffer.tag = TagCertUserInfoDesc;
+        
         map<string, string>::const_iterator it = ui_kv_pair.begin();
         for (/* without init */; it != ui_kv_pair.end(); ++it) {
-            user_info += it->first + "=" + it->second;
-            user_info += "&";
+            user_info_ += it->first + "=" + it->second;
+            user_info_ += "&";
         }
 
-        buffer.length = user_info.length();
+        tag_ = TagCertUserInfoDesc;
+        length_ = user_info_.length();
     }
 
-    CertUiDescriptor() {}
-
-    uint32_t length() const { return sizeof(buffer) + user_info.length(); }
-
-    void maker(uint8_t *buff) const
+    CertUiDescriptor(string const& str)
+        : user_info_(str)
     {
-        assert(buff != 0);
+        tag_ = TagCertUserInfoDesc;
+        length_ = user_info_.length();
+    }
+    
 
-        buffer_t buf = buffer;
-        string ui = user_info;
-        if (g_byteorder == OrderLittleEndian) {
-            buf.tag = buffer.tag;
-            buf.len = change_order(buffer.length);
-            ui = change_order(user_info);
-        } 
+    CertUiDescriptor() 
+    {
+        user_info_ = "";
+        tag_ = TagCertUserInfoDesc;
+        length_ = user_info_.length();
+    }
 
-        memcpy(buff, &buf, sizeof(buf));
-        memcpy(&buff[sizeof(buf)], ui.c_str(), ui.length());
+    virtual ByteStream getStream()  
+    {
+        ByteStream bs;
+        bs.SetByteOrder(NETWORK_BYTEORDER);
+
+        bs.PutUint8(tag_);
+        bs.PutUint16(length_);
+
+        // todo:: 
+        bs.PutString16(user_info_);
+
+        return bs;
+    }
+
+    bool operator==(CertUiDescriptor const& rhs)
+    {
+        return user_info_ == rhs.user_info_;
+    }
+
+    bool operator!=(CertUiDescriptor const& rhs)
+    {
+        return !(*this == rhs);
     }
 };
+
+
 
 #endif //gehua_certmgr_certui_desc_h_

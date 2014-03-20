@@ -79,10 +79,10 @@ void TermBasicFuncSvr::NotifyAllTerminalStatusPChanged( CASession *ca_session )
     }
 
     // add notify work.
-    for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
+    for ( iter = ca_session->terminal_session_map_.begin(); iter != ca_session->terminal_session_map_.end(); iter++ )
     {
         PtStatusNotifyRequest *tmp = new PtStatusNotifyRequest;
-        tmp->terminal_list_desc_ = notify_request.terminal_list_desc_;        
+        tmp->terminal_list_desc_ = notify_request.terminal_list_desc_;
 
         AddStatusPChangeNotifyWork(iter->second->term_conn, tmp);
     }
@@ -104,11 +104,18 @@ void TRequestWork_KeyMapping::Func_Begin( Work *work )
         //transpond to target terminal.
 
         PtKeyMappingResponse keymapping_response;
-        keymapping_response.key_mapping_desc_ = keymapping_work->pkg_->key_mapping_desc_;
+        keymapping_response.Add(keymapping_work->pkg_->key_mapping_desc_);
 
         ByteStream responed_pkg = keymapping_response.Serialize();
-        responed_pkg.Add(keymapping_response.key_mapping_desc_.Serialize());
-        iter->second->term_conn->Write((unsigned char*)responed_pkg.GetBuffer(), responed_pkg.GetWritePtr());
+
+        psm_context->logger_.Trace("[键值映射请求][CAID=%I64d][SID=%I64d] 向指定终端[SID=%I64d]转发键值映射请求。 长度：%d  内容：\n%s", 
+                                    keymapping_work->session_info_->CAId(), keymapping_work->session_info_->Id(),
+                                    iter->second->Id(),
+                                    responed_pkg.Size(),
+                                    stringtool::to_hex_string((const char*)responed_pkg.GetBuffer(), responed_pkg.Size()).c_str());
+
+
+        iter->second->term_conn->Write(responed_pkg.GetBuffer(), responed_pkg.Size());
     }
 
     TRequestWork_StatusQuery::Func_End(work);
@@ -132,11 +139,17 @@ void TNotifyWork_SvcSwitch::Func_Begin( Work *work )
     PSMContext *psm_context                = (PSMContext*)work->user_ptr_;
 
     // send notify to terminal.
-    svcswitch_work->run_step_ = TNotifyWork_SvcSwitch::SvcSwitch_SendNotify;    
+    svcswitch_work->run_step_ = TNotifyWork_SvcSwitch::SvcSwitch_SendNotify;   
+
+    if ( svcswitch_work->pkg_->svc_url_desc_.valid_ )           svcswitch_work->pkg_->Add(svcswitch_work->pkg_->svc_url_desc_);
+    if ( svcswitch_work->pkg_->keymap_indicate_desc_.valid_ )   svcswitch_work->pkg_->Add(svcswitch_work->pkg_->keymap_indicate_desc_);
 
     ByteStream bs = svcswitch_work->pkg_->Serialize();
-    if ( svcswitch_work->pkg_->svc_url_desc_.valid_ )           bs.Add(svcswitch_work->pkg_->svc_url_desc_.Serialize());
-    if ( svcswitch_work->pkg_->keymap_indicate_desc_.valid_ )   bs.Add(svcswitch_work->pkg_->keymap_indicate_desc_.Serialize());
+
+    psm_context->logger_.Trace("[业务切换通知][CAID=%I64d][SID=%I64d] 向终端发送业务切换通知。 长度：%d  内容：\n%s", 
+                                svcswitch_work->session_info_->CAId(), svcswitch_work->session_info_->Id(),
+                                bs.Size(),
+                                stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
 
     if ( svcswitch_work->session_info_->term_conn->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
     {
@@ -177,12 +190,19 @@ void TNotifyWork_StatusNotify::Func_Begin( Work *work )
     // send notify to terminal.
     statusnotify_work->run_step_ = TNotifyWork_StatusNotify::StatusNotify_SendNotify;
 
-    ByteStream bs = statusnotify_work->pkg_->Serialize();
     for ( list<PT_TerminalInfoDescriptor>::iterator iter = statusnotify_work->pkg_->terminal_list_desc_.begin();
         iter != statusnotify_work->pkg_->terminal_list_desc_.end(); iter++ )
     {
-        bs.Add(iter->Serialize());
+        statusnotify_work->pkg_->Add(*iter);
     }
+
+    ByteStream bs = statusnotify_work->pkg_->Serialize();
+
+    psm_context->logger_.Trace("[状态变更通知][CAID=%I64d][SID=%I64d] 向终端发送状态变更通知。 长度：%d  内容：\n%s", 
+                                statusnotify_work->session_info_->CAId(), statusnotify_work->session_info_->Id(),
+                                bs.Size(),
+                                stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
+
     if ( statusnotify_work->session_info_->term_conn->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
     {
         // and responed process work.

@@ -17,68 +17,53 @@
 #include <assert.h>
 #include "desc-common.h"
 
-struct PublicKeyDescriptor 
+struct PublicKeyDescriptor : public DescBase 
 {
-private:
-    #pragma pack(1)
-    struct buffer_t {
-        uint8_t tag;
-        uint16_t length;
-        uint8_t e[4];
-        uint8_t n[128];
-        buffer_t(buffer_t const& rhs)
-        {
-            *this = rhs;
-        }
-        buffer_t& operator=(buffer_t const& rhs)
-        {
-            if (this == &rhs)
-                return *this;
+    uint8_t e_[4];
+    uint8_t n_[128];
 
-            tag = rhs.tag;
-            length = rhs.length;
-            memcpy(e, rhs.e, sizeof(e));
-            memcpy(n, rhs.n, sizeof(n));
-
-            return *this;
-        }
-    } ATTR_PACKED ;
-    #pragma pack(1)
-
-    buffer_t buffer;
-public:
     PublicKeyDescriptor(uint8_t e[4], uint8_t n[128])
     {
         assert(e != 0);
         assert(n != 0);
 
-        buffer.tag = TagPublicKeyDesc;
-        buffer.length = sizeof(buffer.e) + sizeof(buffer.n);
-        memcpy(buffer.e, e, sizeof(buffer.e));
-        memcpy(buffer.n, n, sizeof(buffer.n));
+        tag_ = TagPublicKeyDesc;
+        length_ = sizeof(e_) + sizeof(n_);
+        memcpy(e_, e, sizeof(e_));
+        memcpy(n_, n, sizeof(n_));
     }
 
-    PublicKeyDescriptor() {}
-
-    uint32_t length() const { return sizeof(buffer); }
-
-    void maker(uint8_t *buff) const
+    PublicKeyDescriptor() 
     {
-        assert(buff != 0);
+        tag_ = TagPublicKeyDesc;
+        length_ = sizeof(e_) + sizeof(n_);
+        memset(e_, 0, sizeof(e_));
+        memset(n_, 0, sizeof(n_));
+    }
 
-        buffer_t buf;
-        buf.tag = buffer.tag;
-        buf.length = buffer.length;
-        memcpy(buf.e, buffer.e, sizeof(buffer.e));
-        memcpy(buf.n, buffer.n, sizeof(buffer.n));
-        if (g_byteorder == OrderLittleEndian) {
-            buf.tag = buffer.tag;
-            buf.length = change_order(buffer.length);
-            change_order(buf.e);
-            change_order(buf.n);
-        } 
+    virtual ByteStream getStream() 
+    {
+        ByteStream bs;
+        bs.SetByteOrder(NETWORK_BYTEORDER);
 
-        memcpy(buff, &buf, sizeof(buf));
+        bs.PutUint8(tag_);
+        bs.PutUint16(length_);
+
+        // todo:: 
+        bs.Add(e_, sizeof(e_));
+        bs.Add(n_, sizeof(n_));
+
+        return bs;
+    }
+    bool operator==(PublicKeyDescriptor const& rhs)
+    {
+        return  !memcmp(e_, rhs.e_, sizeof(e_)) && 
+                !memcmp(n_, rhs.n_, sizeof(n_));
+    }
+
+    bool operator!=(PublicKeyDescriptor const& rhs)
+    {
+        return !(*this == rhs);
     }
 };
 

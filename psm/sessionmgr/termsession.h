@@ -5,8 +5,6 @@
 #if !defined gehua_sessionmgr_terminal_session_h_
 #define gehua_sessionmgr_terminal_session_h_
 
-#include <stack>
-#include <string>
 #include <cpplib/logger.h>
 #include <protocol/protocol_v2_common.h>
 #include <protocol/protocol_v2_general.h>
@@ -40,13 +38,14 @@ public:
     bool valid() const { return valid_; }
 public:
     CASession       *ca_session;
+    Mutex            term_conn_mtx;
     TermConnection  *term_conn;
 
     BusinessType            curr_busi_type;
     BusinessType            last_busi_type;
 
-    stack<string>           back_url_stack;
-    PB_SvcURLDescriptor     url_desc;
+    stack<string>          back_url_stack;
+    PB_SvcURLDescriptor     curr_svc_url_desc;
 
     ServiceGroup    service_grp;
     UserInfo        user_info;
@@ -62,7 +61,9 @@ public:
     caid_t CAId() const { return caid_;}
     void Id(uint64_t id) { id_ = id; terminal_info_desc.session_id_ = id_; }
 
-    void UpdateSessionInfo(PB_SvcURLDescriptor &url_desc);
+    void    UpdateSessionInfo(PB_SvcURLDescriptor &url_desc);
+    string  GetBackURL(string &curr_apply_url);
+    void    UpdateBackURL(PB_SvcURLDescriptor &url_desc);
 
 private:
     uint64_t    id_;

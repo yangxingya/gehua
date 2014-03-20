@@ -35,6 +35,7 @@ struct TermConnection : public AioConnection
 
     virtual void OnDisconnected()
     {
+        
     }
 
     virtual void OnDataReceived();

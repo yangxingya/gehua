@@ -20,51 +20,51 @@
 
 using ::std::string;
 
-struct OperatorInfoDescriptor 
+struct OperatorInfoDescriptor : public DescBase
 {
-private:
-    #pragma pack(1)
-    struct buffer_t {
-        uint8_t tag;
-        uint16_t length;
-        uint32_t id;
-    } ATTR_PACKED ;
-    #pragma pack(1)
-
-    buffer_t buffer;
-    string name;
-public:
+    uint32_t id_;
+    string name_;
     OperatorInfoDescriptor(uint32_t id, string const& name)
     {
-        buffer.tag = TagOperatorInfoDesc;
-        buffer.id = id;
-        this->name = name;
-        buffer.length = sizeof(buffer.id) + this->name.length() + 1;
+        tag_ = TagOperatorInfoDesc;
+        id_ = id;
+        name_ = name;
+        length_ = sizeof(id_) + name_.length() + 1;
     }
 
-    OperatorInfoDescriptor() {}
-
-    uint32_t length() const { return buffer.length + 3; }
-
-    void maker(uint8_t *buff) const
+    OperatorInfoDescriptor() 
     {
-        assert(buff != 0);
-
-        buffer_t buf = buffer;
-        string na = name;
-        if (g_byteorder == OrderLittleEndian) {
-            buf.tag = buffer.tag;
-            buf.len = change_order(buffer.length);
-            buf.id = change_order(buffer.id);
-            na = change_order(name);
-        } 
-
-        memcpy(buff, &buf, sizeof(buf));
-        //todo::??? name element is string<8> ??? or string<0>
-        uint8_t nl = name.length();
-        memcpy(&buff[sizeof(buf)], &nl, sizeof(nl));
-        memcpy(&buff[sizeof(buf)+sizeof(nl)], na.c_str(), na.length());
+        tag_ = TagOperatorInfoDesc;
+        id_ = 0;
+        name_ = "gehua";
+        length_ = sizeof(id_) + name_.length() + 1;
     }
+    
+    virtual ByteStream getStream() 
+    {
+        ByteStream bs;
+        bs.SetByteOrder(NETWORK_BYTEORDER);
+
+        bs.PutUint8(tag_);
+        bs.PutUint16(length_);
+
+        // todo:: 
+        bs.PutUint32(id_);
+        bs.PutString8(name_);
+
+        return bs;
+    }
+
+    bool operator==(OperatorInfoDescriptor const& rhs)
+    {
+        return id_ == rhs.id_ && name_ == rhs.name_;
+    }
+
+    bool operator!=(OperatorInfoDescriptor const& rhs)
+    {
+        return !(*this == rhs);
+    }
+  
 };
 
 #endif //gehua_certmgr_opertaori_desc_h_

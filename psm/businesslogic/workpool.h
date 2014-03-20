@@ -17,23 +17,54 @@ struct WorkPool
 {
     WorkPool(Logger& logger, int sz = 1);
 
+    bool Start();
+    void Stop();
+
     void Assign(Work *wk, int id);
     void Assign(DelayedWork *dwk, int id);
 
     void CancelAllWork();
 private:
     Logger &logger_;
+    bool started_;
     vector<WorkQueue*> wq_array_;
     vector<WorkQueue*> delay_wq_array_;
 };
 
 inline 
 WorkPool::WorkPool(Logger& logger, int sz)
-: logger_(logger)
+: logger_(logger), started_(false)
 {
     for (int i = 0; i < sz; ++i) {
         wq_array_.push_back(new WorkQueue);
         delay_wq_array_.push_back(new WorkQueue);
+    }
+}
+
+inline 
+bool WorkPool::Start()
+{
+    if (!started_) {
+        for (size_t i = 0; i < wq_array_.size(); ++i) {
+            wq_array_[i]->Start();
+            delay_wq_array_[i]->Start();
+        }
+
+        started_ = true;
+    }
+
+    return started_;
+}
+
+inline 
+void WorkPool::Stop()
+{
+    if (started_) {
+        for (size_t i = 0; i < wq_array_.size(); ++i) {
+            wq_array_[i]->Stop();
+            delay_wq_array_[i]->Stop();
+        }
+        started_ = false;  
     }
 }
 

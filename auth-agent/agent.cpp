@@ -11,9 +11,12 @@
 #include <string>
 #include <vector>
 #include "reqentry.h"
+#include <cpplib/logger.h>
 
 using ::std::string;
 using ::std::vector;
+
+static Logger g_logger;
 
 static size_t getline(FCGX_Stream *in, vector<string> *out)
 {
@@ -27,50 +30,25 @@ static size_t getline(FCGX_Stream *in, vector<string> *out)
     return ret;
 }
 
-int main1()  
-{  
-    FCGX_Stream *in, *out, *err;  
-    FCGX_ParamArray env;  
-    int count = 0;  
-  
-    while (FCGX_Accept(&in, &out, &err, &env) >= 0) {  
-        
-        //get req header, and context.
-        string q_str;
-        vector<string> content;
-        
-
-        bool keepalive;
-        do {
-
-            content.clear();
-            q_str = FCGX_GetParam("QUERY_STRING", env);
-            getline(in, &content);
-
-            RequestEntry reqety(q_str, content);
-            if (!reqety.valid())
-                break;
-
-            string rescontent = reqety.MakeResponse();
-        
-            
-            keepalive = reqety.ConnKeepAlive();
-
-        } while (keepalive);
-
-    } /* while */  
-
-    return 0;  
-} 
-
 int main() 
 {
+     // 初始化日志对象
+    g_logger.SetLimit(10);
+    g_logger.SetModule("auth-agent");
+    g_logger.SetPath("./log/auth-agent");
+    g_logger.SetLogLevel(LOGLEVEL_Trace);
+    g_logger.SetOutputToScreen(true);
+    g_logger.SetOutputToFile(true);
+    g_logger.SetBackgroundRunning(true);
+
     FCGX_Request request;
 
     FCGX_Init();
     FCGX_InitRequest(&request, 0, 0);
 
     int count = 0;  
+
+    g_logger.Info("PSM-HTTP Server Started!");
   
     while (FCGX_Accept_r(&request) >= 0) {
 
@@ -85,7 +63,7 @@ int main()
             q_str = FCGX_GetParam("QUERY_STRING", request.envp);
             getline(request.in, &content);
 
-            RequestEntry reqety(q_str, content);
+            RequestEntry reqety(g_logger, q_str, content);
             if (!reqety.valid())
                 break;
 
@@ -98,17 +76,18 @@ int main()
             if (!keepalive) 
                 conn = "Connection: close\r\n";
 
-            FCGX_FPrintF(request.out, 
-                "Pragma: no-cache\r\n"			
-                "Cache-Control: no-cache\r\n"
-                "Content-Type: text/html\r\n"
-                "%s"
-                "Content-Length: %d\r\n"
-                "\r\n"
-                "%s",
-                conn.c_str(),
-                rescontent.length(),
-                rescontent.c_str());
+            int writed = FCGX_FPrintF(request.out, 
+                            "Pragma: no-cache\r\n"			
+                            "Cache-Control: no-cache\r\n"
+                            "Content-Type: text/html\r\n"
+                            "%s"
+                            "Content-Length: %d\r\n"
+                            "\r\n"
+                            "%s",
+                            conn.c_str(),
+                            rescontent.length(),
+                            rescontent.c_str());
+            g_logger.Info("FastCGI Printf return code: %d context: %s!", writed, rescontent.c_str());
             FCGX_FFlush(request.out);
             FCGX_FClose(request.out);
         } while (false);  

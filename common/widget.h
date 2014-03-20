@@ -93,6 +93,28 @@ inline string change_order(string const& t)
     return dest;
 }
 
+inline string to_lower(string const& str)
+{
+    string tmp = str;
+    for (string::size_type i = 0; i < tmp.length(); ++i) {
+        if (tmp[i] >= 'A' && tmp[i] <= 'Z')
+            tmp[i] = tmp[i] - 'A' + 'a';
+    }
+
+    return tmp;
+}
+
+inline string to_higher(string const& str)
+{
+    string tmp = str;
+    for (string::size_type i = 0; i < tmp.length(); ++i) {
+        if (tmp[i] >= 'a' && tmp[i] <= 'z')
+            tmp[i] = tmp[i] - 'a' + 'A';
+    }
+
+    return tmp;
+}
+
 inline size_t split(string const& str, string const& sp, 
                     vector<string> *out)
 {
@@ -112,7 +134,8 @@ inline size_t split(string const& str, string const& sp,
 //split string likely "key1=value1&key2=value2..." to
 // map["key1"] = "value1", map["key2"] = "value2".
 inline size_t split(string const& str, string const& sp1, 
-                    string const& sp2, map<string, string> *out)
+                    string const& sp2, map<string, string> *out,
+                    bool case_sensitivity = true)
 {
     vector<string> strvec;
 
@@ -127,8 +150,10 @@ inline size_t split(string const& str, string const& sp1,
             kv_map.clear();
             break;
         }
-
-        kv_map[strvec[i].substr(0, pos)] = strvec[i].substr(pos + sp2.length());
+        if (case_sensitivity)
+            kv_map[strvec[i].substr(0, pos)] = strvec[i].substr(pos + sp2.length());
+        else
+            kv_map[to_lower(strvec[i].substr(0, pos))] = strvec[i].substr(pos + sp2.length());
     }
 
     *out = kv_map;
@@ -205,7 +230,7 @@ inline uint32_t ip_cast(string const& ipstr)
         } bs;
         uint32_t value;
     } ATTR_PACKED ;
-    #pragma pack(1)
+    #pragma pack()
 
 
     tmp_t tmp;
@@ -303,26 +328,6 @@ inline size_t to_array(string const& arr, vector<uint8_t> *out)
     return to_array(arr, &(*out)[0]);
 }
 
-inline string to_lower(string const& str)
-{
-    string tmp = str;
-    for (string::size_type i = 0; i < tmp.length(); ++i) {
-        if (tmp[i] >= 'A' && tmp[i] <= 'Z')
-            tmp[i] = tmp[i] - 'A' + 'a';
-    }
 
-    return tmp;
-}
-
-inline string to_higher(string const& str)
-{
-    string tmp = str;
-    for (string::size_type i = 0; i < tmp.length(); ++i) {
-        if (tmp[i] >= 'a' && tmp[i] <= 'z')
-            tmp[i] = tmp[i] - 'a' + 'A';
-    }
-
-    return tmp;
-}
 
 #endif //!gehua_common_widget_h_

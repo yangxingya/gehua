@@ -39,14 +39,16 @@ void TermConnection::OnDataReceived()
         if (!login_) {
             if (msg->msg_id_ != CLOUDv2_PT_TERM_LOGIN_REQUEST) {
                 // set session invalid
-                LOG_WARN("[%s:TCP] 终端连接后第一个请求非登录请求：%s, dump:\n%s", IdString().c_str(), GetPeerAddr().c_str(), recv_buffer_.DumpHex(16,true).c_str());
+                LOG_WARN("[%s:TCP] 终端连接后第一个请求非登录请求：%s, XXXXX:\n%s", IdString().c_str(), GetPeerAddr().c_str(), recv_buffer_.DumpHex(16,true).c_str());
                 SetDirty();
                 break;  
             }
 
             term_session_ = psm_ctx_->busi_pool_->GenTermSession((PtLoginRequest *)msg, this);
             if (term_session_ == NULL) {
-                LOG_WARN("[%s:TCP] 终端连接后第一个请求验证失败：%s, dump:\n%s", IdString().c_str(), GetPeerAddr().c_str(), recv_buffer_.DumpHex(16,true).c_str());
+                LOG_WARN("[%s:TCP] 终端连接后第一个请求验证失败：%s", 
+                         IdString().c_str(), 
+                         GetPeerAddr().c_str());
                 SetDirty();
                 break;
             }

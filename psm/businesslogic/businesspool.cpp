@@ -9,6 +9,7 @@ BusinessPool::BusinessPool(Logger& logger, int thread_cnt)
     , thread_cnt_(thread_cnt)
     , psm_ctx_(0)
     , started_(false)
+    , global_cnt_(0)
 {
     for (int i = 0; i < thread_cnt; ++i) {
         pool_relation_ca_session_mgr_.push_back(new CASessionMgr);
@@ -44,7 +45,6 @@ uint64_t BusinessPool::genTermSessionId(
     // terminal session id is 64 bit 
     // [ip<1bytes>] + [time<3bytes>] + [global_cnt<2bytes>] + [caid<2bytes>];
 
-    #pragma pack(1)
     union tmp_t {
         struct {
             uint8_t  ip;
@@ -54,8 +54,7 @@ uint64_t BusinessPool::genTermSessionId(
             uint16_t ca;
         } pt;
         uint64_t value;
-    } ATTR_PACKED ;
-    #pragma pack(1)
+    };
 
     uint32_t ti = (uint32_t)time;
 
@@ -110,7 +109,7 @@ TermSession* BusinessPool::GenTermSession(PtLoginRequest *msg, TermConnection *c
     // valid ok.
 
     // generate terminal session id.
-    uint64_t ts_id = genTermSessionId(get_up_time(), global_cnt_, psm_ctx_->ip_addr(), ts->CAId());
+    uint64_t ts_id = genTermSessionId(get_up_time(), global_cnt_++, psm_ctx_->ip_addr(), ts->CAId());
     logger_.Trace("PSM Business Pool generate terminal session id: "U64T, ts_id);
     ts->Id(ts_id);
 
@@ -119,10 +118,28 @@ TermSession* BusinessPool::GenTermSession(PtLoginRequest *msg, TermConnection *c
 
     if (cs == NULL) {
         cs = cs_mgr->Create(ts->CAId());
+        cs_mgr->Attach(cs);
     }
 
     ts->ca_session = cs;
     cs->Add(ts);
+
+    //ÉèÖÃSessionÃèÊö·û
+    {
+        ByteStream agreekey;
+        for ( int i=0; i<8; i++ ) {
+            agreekey.Add((uint8_t*)"\x0F\x0E\x0D\x0C\x0B\x0A\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00",16);
+        } 
+
+        ts->session_info_desc.agreement_key_ = agreekey;
+        ts->session_info_desc.session_id_    = ts->Id();
+        ts->session_info_desc.timeout_       = 15;
+        ts->session_info_desc.interval_time_ = 10;
+        ts->session_info_desc.valid_         = true;
+    }
+
+    //ÉèÖÃÖÕ¶ËÃèÊö·û
+    ts->terminal_info_desc.session_id_ = ts->Id();
 
     return ts;
 }
@@ -165,14 +182,15 @@ uint32_t BusinessPool::DelTermSession(TermSession *ts)
 
 bool BusinessPool::Start()
 {
-    started_ = true;
-    //todo::
-
-    return true;
+    if (!started_) {
+        started_ = wk_pool_.Start();
+    }
+    return started_;
 }
 
 void BusinessPool::Stop()
 {
+    wk_pool_.Stop();
     started_ = false;
 }
 

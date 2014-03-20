@@ -16,76 +16,9 @@
 struct HTTPAysnRequestInfo
 {
 public:
-    void SetRequestURL(string &sm_addr, string &card_id)
-    {
-        ByteStream bs;
-        bs.Add("http://");
-        bs.Add(sm_addr);
-        bs.Add("?userid=");
-        bs.Add(card_id);
-        bs.Add("&req=PSM_SERVICE_INIT_REQUEST");
-
-        request_url_ = bs;
-
-        sm_addr_ = sm_addr;
-    }
-
-    void SetRequestBody(ByteStream &svc_self_apply_desc, 
-        ByteStream &user_info_desc, 
-        ByteStream &terminal_info_desc,
-        string &psm_addr)
-    {
-        ByteStream bs;
-        ByteStream tmp_bs;
-
-        bs.Add("\r\nSvcApply=");
-        bs.Add(svc_self_apply_desc.DumpHex(svc_self_apply_desc.GetWritePtr(), false));
-
-        bs.Add("\r\nUserInfo=");
-        bs.Add(user_info_desc.DumpHex(user_info_desc.GetWritePtr(), false));
-
-        bs.Add("\r\nTerminalInfo=");
-        bs.Add(terminal_info_desc.DumpHex(terminal_info_desc.GetWritePtr(), false));
-
-        bs.Add("\r\nPsm=");
-        bs.Add(psm_addr);
-
-        bs.Add("\r\n\0");
-
-        request_body_ = bs;
-    }
-
-    void SetRequestBody(ByteStream &svc_cross_apply_desc, 
-        ByteStream &user_info_desc, 
-        ByteStream &terminal_info_desc,
-        ByteStream &user_info_desc2, 
-        ByteStream &terminal_info_desc2,
-        string &psm_addr)
-    {
-        ByteStream bs;
-
-        bs.Add("\r\nSvcApply=");
-        bs.Add(svc_cross_apply_desc.DumpHex(svc_cross_apply_desc.GetWritePtr(), false));
-
-        bs.Add("\r\nUserInfo=");
-        bs.Add(user_info_desc.DumpHex(user_info_desc.GetWritePtr(), false));
-
-        bs.Add("\r\nTerminalInfo=");
-        bs.Add(terminal_info_desc.DumpHex(terminal_info_desc.GetWritePtr(), false));
-
-        bs.Add("\r\nUserInfo2nd=");
-        bs.Add(user_info_desc2.DumpHex(user_info_desc2.GetWritePtr(), false));
-
-        bs.Add("\r\nTerminalInfo2nd=");
-        bs.Add(terminal_info_desc2.DumpHex(terminal_info_desc2.GetWritePtr(), false));
-
-        bs.Add("\r\nPsm=");
-        bs.Add(psm_addr);
-
-        bs.Add("\r\n\0");
-
-        request_body_ = bs;
-    }
+    void SetRequestURL(string &sm_addr, string &card_id);
+    void SetRequestBody(ByteStream &svc_self_apply_desc, ByteStream &user_info_desc, ByteStream &terminal_info_desc, string &psm_addr);
+    void SetRequestBody(ByteStream &svc_cross_apply_desc,ByteStream &user_info_desc, ByteStream &terminal_info_desc, ByteStream &user_info_desc2, ByteStream &terminal_info_desc2, string &psm_addr);
  
 public:
     ByteStream       request_url_;
@@ -122,67 +55,65 @@ struct SvcApplyWork : public Work
         CorssSvcApply
     };
 
-    SvcApplyType                apply_type_;
     SvcApplyRunStep             run_step_;
-    TermSession                 *cross_session_info_;
-    TermSession                 *self_session_info_;
-    HTTPAysnRequestInfo         http_request_info_;
     bool                        apply_sucess_;
     AioConnection               *conn_;
+
+    SvcApplyType                apply_type_;
+    HTTPAysnRequestInfo         http_request_info_;
+    TermSession                 *cross_session_info_;
+    TermSession                 *self_session_info_;
+    string                      work_name_;
+    char                        log_header_[300]; 
+    
+    string  GetServiceName(const char *url);
+    int     AddSendHttpRequestWork(string &service_name, ByteStream &svcapply_desc_buf);
+    int     ParseHttpResponse(ByteStream &response_body, vector<PB_SvcURLDescriptor> &svc_url_desc_list, PB_KeyMapIndicateDescriptor &keymaping_indicate_desc);
 };
+
+/***************************终端业务申请请求处理工作任务**********************************/
 
 /**
  * @brief  终端业务申请工作项定义
  */
 struct TermSvcApplyWork : public SvcApplyWork
 {
-    TermSvcApplyWork(AioConnection *conn, 
-                 PtSvcApplyRequest *pkg, 
-                 TermSession *self_session_info);
-
-    TermSvcApplyWork(AioConnection *conn, 
-                 PtSvcApplyRequest *pkg, 
-                 TermSession *self_session_info, 
-                 TermSession *cross_session_info);
-
-    static int SendErrorResponed(AioConnection *conn, unsigned int ret_code);
-
+    TermSvcApplyWork(AioConnection *conn, PtSvcApplyRequest *pkg, TermSession *self_session_info);
+    TermSvcApplyWork(AioConnection *conn, PtSvcApplyRequest *pkg, TermSession *self_session_info, TermSession *cross_session_info);
     virtual ~TermSvcApplyWork();
+
+    int SendResponed(ByteStream &response_buf);
 
     static void Func_Begin(Work *work);
     static void Func_Inited(Work *work);
     static void Func_End(Work *work);
 
 public:
-    PtSvcApplyRequest           *pkg_;
+    PtSvcApplyRequest *pkg_;
 };
 
 /***************************SM终端业务申请请求处理工作任务**********************************/
 
 /**
- * @brief  终端业务申请工作项定义
+ * @brief  SM终端业务申请工作项定义
  */
 struct SMSvcApplyWork : public SvcApplyWork
 {
-    SMSvcApplyWork(AioConnection *conn, 
-                 PbSvcApplyRequest *pkg, 
-                 TermSession *self_session_info);
+    SMSvcApplyWork(AioConnection *conn, PbSvcApplyRequest *pkg, TermSession *self_session_info);
 
-    SMSvcApplyWork(AioConnection *conn, 
-                 PbSvcApplyRequest *pkg, 
-                 TermSession *self_session_info, 
-                 TermSession *cross_session_info);
-
-    static int SendResponed(AioConnection *conn, PbSvcApplyRequest *pkg, unsigned int ret_code);
-
+    SMSvcApplyWork(AioConnection *conn, PbSvcApplyRequest *pkg, TermSession *self_session_info, TermSession *cross_session_info);
     virtual ~SMSvcApplyWork();
+
+    int SendResponed(unsigned int ret_code);
 
     static void Func_Begin(Work *work);
     static void Func_Inited( Work *work );
     static void Func_End(Work *work);
 
 public:
-    PbSvcApplyRequest           *pkg_;
+    PbSvcApplyRequest *pkg_;
 };
+
+map<string, vector<string>> SplitString2MapList(const char *szString, char cGap1, char cGap2);
 
 #endif

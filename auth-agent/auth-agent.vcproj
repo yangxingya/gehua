@@ -18,7 +18,7 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)nginx-1.5.11"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
@@ -62,6 +62,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="libfcgi.lib"
+				OutputFile="$(OutDir)\$(ProjectName)d.exe"
 				LinkIncremental="2"
 				GenerateDebugInformation="true"
 				SubSystem="1"
@@ -91,7 +92,7 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			OutputDirectory="$(SolutionDir)nginx-1.5.11"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
 			CharacterSet="1"
@@ -188,10 +189,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\desc.h"
-				>
-			</File>
-			<File
 				RelativePath=".\reqentry.h"
 				>
 			</File>
@@ -213,10 +210,6 @@
 		<Filter
 			Name="certmgr"
 			>
-			<File
-				RelativePath="..\common\auth\certdata.h"
-				>
-			</File>
 			<File
 				RelativePath="..\common\auth\certid-desc.h"
 				>
@@ -247,6 +240,10 @@
 			</File>
 			<File
 				RelativePath="..\common\auth\sign-desc.h"
+				>
+			</File>
+			<File
+				RelativePath="..\common\auth\usercert.h"
 				>
 			</File>
 		</Filter>

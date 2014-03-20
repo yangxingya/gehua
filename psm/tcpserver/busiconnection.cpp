@@ -1,5 +1,4 @@
-
-
+#include "../psmcontext.h"
 #include "busiconnection.h"
 #include <protocol/protocol_v2_common.h>
 #include <protocol/protocol_v2_general.h>
@@ -37,9 +36,37 @@ void BusiConnection::OnDataReceived()
         recv_buffer_.FlushReadPtr();
 
 
-        //todo:: work to add 
-        Work *wk; // = new ...;
-        //psm_ctx_->busi_pool_->Assign(wk, term_session_->CAId());
+        switch ( msg->msg_id_ )
+        {
+        case CLOUDv2_PB_BSM_TERMSYNC_REQUEST:
+            {
+                PbTermSyncRequest *pkt = (PbTermSyncRequest*)msg;
+                psm_ctx_->sm_request_process_svr_->AddTermSyncWork(this, pkt);
+            }
+
+            break;
+        case CLOUDv2_PB_BSM_TERMREPORT_REQUEST:
+            {
+                PbTermReportRequest *pkt = (PbTermReportRequest*)msg;
+                psm_ctx_->sm_request_process_svr_->AddTermReportWork(this, pkt);
+            }
+
+            break;
+        case CLOUDv2_PB_BSM_SVCAPPLY_REQUEST:
+            {
+                PbSvcApplyRequest *pkt = (PbSvcApplyRequest*)msg;
+                psm_ctx_->sm_request_process_svr_->AddSvcApplyWork(this, pkt);
+            }
+
+            break;
+        case CLOUDv2_PB_BSM_SVCPCHANGE_REQUEST:
+            {
+                PbSvcPChangeRequest *pkt = (PbSvcPChangeRequest*)msg;
+                psm_ctx_->sm_request_process_svr_->AddSvcPChangeWork(this, pkt);
+            }
+
+            break;
+        }
     }
 }
 

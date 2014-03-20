@@ -16,17 +16,26 @@ SMRequestProcessSvr::~SMRequestProcessSvr()
 
 void SMRequestProcessSvr::AddTermSyncWork( BusiConnection *conn, PbTermSyncRequest *pkg )
 {
+    psm_context_->logger_.Trace("[SM终端状态同步请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d  同步的终端个数：%d", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_ , pkg->term_status_desc_list_.size());
+
     UpdateTermStatus(pkg->term_status_desc_list_);
 
     //send responed.
     PbTermSyncResponse termsync_response;
-    termsync_response.sequence_no_desc_ = pkg->sequence_no_desc_;
-    termsync_response.test_data_desc_   = pkg->test_data_desc_;
+    termsync_response.Add(pkg->sequence_no_desc_);
+    if ( pkg->test_data_desc_.valid_ )
+    {
+        PB_TestDataDescriptor test_data_desc(pkg->test_data_desc_.request_str_, to_string("%.3lf",get_up_time()));
+        termsync_response.Add(test_data_desc);
+    }
 
-    ByteStream bs(termsync_response.Serialize());
-    bs.Add(termsync_response.sequence_no_desc_.Serialize());
-    bs.Add(termsync_response.test_data_desc_.Serialize());
-    if ( !conn->Write((unsigned char*)bs.GetBuffer(), bs.GetWritePtr()) )
+    ByteStream bs = termsync_response.Serialize();
+
+    psm_context_->logger_.Trace("[SM终端状态同步请求] 状态同步完成，向SM发送应答。应答包长度：%d  内容：\n%s", 
+                                bs.Size(),
+                                stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
+
+    if ( !conn->Write(bs.GetBuffer(), bs.Size()) )
     {
         //TODO: 暂时默认发送成功
     }
@@ -36,17 +45,26 @@ void SMRequestProcessSvr::AddTermSyncWork( BusiConnection *conn, PbTermSyncReque
 
 void SMRequestProcessSvr::AddTermReportWork( BusiConnection *conn, PbTermReportRequest *pkg )
 {
+    psm_context_->logger_.Trace("[SM终端状态汇报请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d   汇报的终端个数：%d", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_ , pkg->term_status_desc_list_.size());
+
     int ret = UpdateTermStatus(pkg->term_status_desc_list_);
 
     //send responed.
     PbTermReportResponse termreport_response;
-    termreport_response.sequence_no_desc_ = pkg->sequence_no_desc_;
-    termreport_response.test_data_desc_   = pkg->test_data_desc_;
+    termreport_response.Add(pkg->sequence_no_desc_);
+    if ( pkg->test_data_desc_.valid_ )
+    {
+        PB_TestDataDescriptor test_data_desc(pkg->test_data_desc_.request_str_, to_string("%.3lf",get_up_time()));
+        termreport_response.Add(test_data_desc);
+    }
 
-    ByteStream bs(termreport_response.Serialize());
-    bs.Add(termreport_response.sequence_no_desc_.Serialize());
-    if ( termreport_response.test_data_desc_.valid_ ) bs.Add(termreport_response.test_data_desc_.Serialize());
-    if ( !conn->Write((unsigned char*)bs.GetBuffer(), bs.GetWritePtr()) )
+    ByteStream bs = termreport_response.Serialize();
+
+    psm_context_->logger_.Trace("[SM终端状态汇报请求] 状态更新完成，向SM发送应答。应答包长度：%d  内容：\n%s", 
+                                bs.Size(),
+                                stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
+
+    if ( !conn->Write(bs.GetBuffer(), bs.Size()) )
     {
         //TODO:暂时默认发送成功
     }
@@ -56,17 +74,26 @@ void SMRequestProcessSvr::AddTermReportWork( BusiConnection *conn, PbTermReportR
 
 void SMRequestProcessSvr::AddSvcPChangeWork( BusiConnection *conn, PbSvcPChangeRequest *pkg )
 {
+    psm_context_->logger_.Trace("[SM终端参数变更请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_);
+
     int ret = UpdateTermParam(pkg);
 
     //send responed.
     PbSvcPChangeResponse svcpchange_response;
-    svcpchange_response.sequence_no_desc_ = pkg->sequence_no_desc_;
-    svcpchange_response.test_data_desc_   = pkg->test_data_desc_;
+    svcpchange_response.Add(pkg->sequence_no_desc_);
+    if ( pkg->test_data_desc_.valid_ )
+    {
+        PB_TestDataDescriptor test_data_desc(pkg->test_data_desc_.request_str_, to_string("%.3lf",get_up_time()));
+        svcpchange_response.Add(test_data_desc);
+    }
 
-    ByteStream bs(svcpchange_response.Serialize());
-    bs.Add(svcpchange_response.sequence_no_desc_.Serialize());
-    bs.Add(svcpchange_response.test_data_desc_.Serialize());
-    if ( !conn->Write((unsigned char*)bs.GetBuffer(), bs.GetWritePtr()) )
+    ByteStream bs = svcpchange_response.Serialize();
+
+    psm_context_->logger_.Trace("[SM终端参数变更请求] 参数变更完成，向SM发送应答。应答包长度：%d  内容：\n%s", 
+                                bs.Size(),
+                                stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
+
+    if ( !conn->Write(bs.GetBuffer(), bs.Size()) )
     {
         //TODO:暂时默认发送成功
     }
@@ -76,6 +103,8 @@ void SMRequestProcessSvr::AddSvcPChangeWork( BusiConnection *conn, PbSvcPChangeR
 
 void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyRequest *pkg )
 {
+    psm_context_->logger_.Trace("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_);
+
     unsigned int ret_code = PS_RC_MSG_FORMAT_ERROR;
     do 
     {
@@ -88,6 +117,9 @@ void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyReque
             self_session = psm_context_->busi_pool_->FindTermSessionById(pkg->svc_self_apply_desc_.session_id_);
             if ( self_session == NULL )
             {
+                psm_context_->logger_.Warn("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d. 申请业务的会话[SID=%I64d]不存在。", 
+                                            pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_,
+                                            pkg->svc_self_apply_desc_.session_id_);
                 ret_code = PS_RC_MSG_FORMAT_ERROR;
                 break;
             }
@@ -100,6 +132,11 @@ void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyReque
             cross_session  = psm_context_->busi_pool_->FindTermSessionById(pkg->svc_cross_apply_desc_.show_session_id_);
             if ( self_session == NULL || cross_session == NULL )
             {
+                psm_context_->logger_.Warn("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d. 申请业务的会话[Self_SID=%I64d][Cross_SID=%I64d]不存在。", 
+                    pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_,
+                    pkg->svc_self_apply_desc_.session_id_,
+                    pkg->svc_cross_apply_desc_.show_session_id_);
+
                 ret_code = PS_RC_MSG_FORMAT_ERROR;
                 break;
             }
@@ -120,7 +157,25 @@ void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyReque
     } while (0);
 
     // 参数错误，直接给终端应答
-    SMSvcApplyWork::SendResponed(conn, pkg, ret_code);
+
+    PbSvcApplyResponse svcapply_response(ret_code, 0);
+    if ( pkg->sequence_no_desc_.valid_ )   svcapply_response.Add(pkg->sequence_no_desc_);
+    if ( pkg->test_data_desc_.valid_ )
+    {
+        PB_TestDataDescriptor test_data_desc(pkg->test_data_desc_.request_str_, to_string("%.3lf",get_up_time()));
+        svcapply_response.Add(test_data_desc);
+    }
+
+    ByteStream response_pkg = svcapply_response.Serialize();
+
+    psm_context_->logger_.Trace("[SM终端业务申请请求] 处理失败，向SM发送失败应答。 长度：%d  内容：\n%s", 
+                                response_pkg.Size(),
+                                stringtool::to_hex_string((const char*)response_pkg.GetBuffer(),response_pkg.Size()).c_str());
+
+    if ( conn->Write(response_pkg.GetBuffer(), response_pkg.Size()) )
+    {
+        //TODO:暂时默认发送成功
+    }
 
     delete pkg;
 }
@@ -139,6 +194,8 @@ int SMRequestProcessSvr::UpdateTermStatus( list<PB_TerminalStatusDescriptor> &te
                 // if status changed, update business status.
                 if ( term_session->terminal_info_desc.business_status_ != iter->business_status_ )
                 {
+                    psm_context_->logger_.Trace("[状态变更通知][CAID=%I64d][SID=%I64d] 会话信息发送变化，向终端发送状态变更通知。", term_session->CAId(), term_session->Id());
+
                     term_session->terminal_info_desc.business_status_ = iter->business_status_;
                     psm_context_->term_basic_func_svr_->NotifyAllTerminalStatusPChanged(term_session->ca_session);
                 }
@@ -164,6 +221,8 @@ int SMRequestProcessSvr::UpdateTermParam( PbSvcPChangeRequest *pkg )
         //只给在PhoneControl业务中的终端发送业务切换通知
         if ( iter->second->curr_busi_type == BSPhoneControl )
         {
+            psm_context_->logger_.Trace("[业务切换通知][CAID=%I64d][SID=%I64d] SM返回业务切换指示，向终端发送业务切换通知。", iter->second->CAId(), iter->second->Id());
+
             PtSvcSwitchRequest *svcswitch_pkg = new PtSvcSwitchRequest;
             svcswitch_pkg->keymap_indicate_desc_ = pkg->key_map_indicate_desc_;
             psm_context_->term_basic_func_svr_->AddSvcSwitchNotifyWork(iter->second->term_conn, svcswitch_pkg);

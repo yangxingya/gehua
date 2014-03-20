@@ -6,7 +6,7 @@
 	ProjectGUID="{C38BD01C-097D-4322-A6F5-B560CFC2E61D}"
 	RootNamespace="psm"
 	Keyword="Win32Proj"
-	TargetFrameworkVersion="196613"
+	TargetFrameworkVersion="131072"
 	>
 	<Platforms>
 		<Platform
@@ -18,10 +18,10 @@
 	<Configurations>
 		<Configuration
 			Name="Debug|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			OutputDirectory="..\..\exe"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			CharacterSet="1"
+			CharacterSet="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -46,9 +46,12 @@
 				MinimalRebuild="true"
 				BasicRuntimeChecks="3"
 				RuntimeLibrary="3"
+				StructMemberAlignment="0"
 				UsePrecompiledHeader="0"
 				WarningLevel="3"
-				DebugInformationFormat="4"
+				Detect64BitPortabilityProblems="false"
+				DebugInformationFormat="3"
+				EnablePREfast="false"
 			/>
 			<Tool
 				Name="VCManagedResourceCompilerTool"
@@ -61,10 +64,16 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				LinkIncremental="2"
+				AdditionalDependencies=""
+				OutputFile="$(OutDir)\$(ProjectName)d.exe"
+				LinkIncremental="1"
+				AdditionalLibraryDirectories="..\..\lib"
 				GenerateDebugInformation="true"
 				SubSystem="1"
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
+				Profile="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -83,6 +92,8 @@
 			/>
 			<Tool
 				Name="VCAppVerifierTool"
+				PageHeapConserveMemory="false"
+				PageHeapProtectionLocation="0"
 			/>
 			<Tool
 				Name="VCPostBuildEventTool"
@@ -90,11 +101,11 @@
 		</Configuration>
 		<Configuration
 			Name="Release|Win32"
-			OutputDirectory="$(SolutionDir)$(ConfigurationName)"
+			OutputDirectory="..\..\exe"
 			IntermediateDirectory="$(ConfigurationName)"
 			ConfigurationType="1"
-			CharacterSet="1"
-			WholeProgramOptimization="1"
+			CharacterSet="0"
+			WholeProgramOptimization="0"
 			>
 			<Tool
 				Name="VCPreBuildEventTool"
@@ -113,14 +124,17 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				Optimization="2"
-				EnableIntrinsicFunctions="true"
+				Optimization="0"
+				WholeProgramOptimization="true"
 				AdditionalIncludeDirectories="..\..\include;..\..\include\libghttp"
 				PreprocessorDefinitions="WIN32;NDEBUG;_CONSOLE"
 				RuntimeLibrary="2"
-				EnableFunctionLevelLinking="true"
+				StructMemberAlignment="0"
 				UsePrecompiledHeader="0"
+				BrowseInformation="0"
+				BrowseInformationFile=""
 				WarningLevel="3"
+				Detect64BitPortabilityProblems="false"
 				DebugInformationFormat="3"
 			/>
 			<Tool
@@ -134,12 +148,19 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
+				AdditionalDependencies=""
 				LinkIncremental="1"
+				AdditionalLibraryDirectories="..\..\lib"
 				GenerateDebugInformation="true"
+				AssemblyDebug="0"
 				SubSystem="1"
-				OptimizeReferences="2"
-				EnableCOMDATFolding="2"
+				OptimizeReferences="0"
+				EnableCOMDATFolding="0"
+				ProfileGuidedDatabase=""
+				RandomizedBaseAddress="1"
+				DataExecutionPrevention="0"
 				TargetMachine="1"
+				Profile="true"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -198,6 +219,14 @@
 			</File>
 			<File
 				RelativePath=".\work_svc_apply.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\work_svc_apply_sm.cpp"
+				>
+			</File>
+			<File
+				RelativePath=".\work_svc_apply_term.cpp"
 				>
 			</File>
 			<File

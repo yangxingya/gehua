@@ -18,45 +18,48 @@
 #include <assert.h>
 #include "desc-common.h"
 
-struct CertIdDescriptor 
+struct CertIdDescriptor : public DescBase
 {
-private:
-    #pragma pack(1)
-    struct buffer_t {
-        uint8_t tag;
-        uint16_t length;
-        uint64_t id;
-    } ATTR_PACKED ;
-    #pragma pack(1)
+    uint64_t id_;
 
-    buffer_t buffer;
-public:
-    CertIdDescriptor() {}
+    CertIdDescriptor() 
+    {
+        tag_ = TagCertIdDesc;
+        length_ = sizeof(id_);
+        id_ = 0;
+    }
 
     CertIdDescriptor(uint64_t id)
     {
-        buffer.tag = TagCertIdDesc;
-        buffer.length = sizeof(buffer.id);
-        buffer.id = id;
+        tag_ = TagCertIdDesc;
+        length_ = sizeof(id_);
+        id_ = id;
     }
 
-    uint64_t id() const { return buffer.id; }
-
-    uint32_t length() const { return sizeof(buffer); }
-
-    void maker(uint8_t *buff) const
+    virtual ByteStream getStream() 
     {
-        assert(buff != 0);
+        ByteStream bs;
+        bs.SetByteOrder(NETWORK_BYTEORDER);
 
-        buffer_t buf = buffer;
-        if (g_byteorder == OrderLittleEndian) {
-            buf.tag = buffer.tag;
-            buf.len = change_order(buffer.length);
-            buf.id = change_order(buffer.id);			
-        } 
+        bs.PutUint8(tag_);
+        bs.PutUint16(length_);
 
-        memcpy(buff, &buf, sizeof(buf));
+        // todo:: 
+        bs.PutUint64(id_);
+
+        return bs;
+    }
+    bool operator==(CertIdDescriptor const& rhs)
+    {
+        return id_ == rhs.id_;
+    }
+
+    bool operator!=(CertIdDescriptor const& rhs)
+    {
+        return !(*this == rhs);
     }
 };
+
+
 
 #endif //gehua_certmgr_certid_desc_h_

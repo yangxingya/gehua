@@ -78,12 +78,19 @@ void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyReq
             }
             else
             {
+                psm_context_->logger_.Warn("[终端业务申请请求][CAID=%I64d][SID=%I64d] 申请呈现端的会话[SID=%I64d]不存在。",  
+                                            conn->term_session_->CAId(), conn->term_session_->Id(),
+                                            pkg->svc_cross_apply_desc_.show_session_id_);    
+
                 ret_code = PT_RC_MSG_FORMAT_ERROR;
                 break;
             }
         }
         else
         {
+            psm_context_->logger_.Warn("[终端业务申请请求][CAID=%I64d][SID=%I64d] 申请参数不合法。",  
+                                        conn->term_session_->CAId(), conn->term_session_->Id());    
+
             ret_code = PT_RC_MSG_FORMAT_ERROR;
             break;
         } 
@@ -96,7 +103,19 @@ void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyReq
     } while (0);
     
     // 参数错误，直接给终端应答
-    TermSvcApplyWork::SendErrorResponed(conn, ret_code);
+
+    PtSvcApplyResponse svcapply_response(ret_code, 0);
+    ByteStream response_pkg = svcapply_response.Serialize();
+
+    psm_context_->logger_.Trace("[终端业务申请请求][CAID=%I64d][SID=%I64d] 处理业务申请请求失败，向终端发送失败应答。长度：%d  内容：\n",  
+                                conn->term_session_->CAId(), conn->term_session_->Id(),
+                                response_pkg.Size(),
+                                stringtool::to_hex_string((const char*)response_pkg.GetBuffer(),response_pkg.Size()).c_str());    
+        
+    if ( conn->Write(response_pkg.GetBuffer(), response_pkg.Size()) )
+    {
+        //TODO:暂时默认发送成功
+    }
 
     delete pkg;
 }
