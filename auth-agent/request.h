@@ -79,6 +79,8 @@ struct ReqBase
 
     virtual bool Valid() = 0;
 
+    virtual string Name() const = 0;
+
     ReqType Type() const { return request_; }
 
     bool case_sensitivity() const { return case_sensitivity_; }
@@ -98,6 +100,11 @@ struct ReqGetSTBQRCode : public ReqBase
     {
         logger_.Info("获取二维码请求...");
         request_ = RTGetSTBQRCode;
+    }
+
+    virtual string Name() const
+    {
+        return "获取二维码请求";
     }
 
     virtual bool Parse()
@@ -136,7 +143,7 @@ struct ReqChallenge : public ReqBase
     bool have_testdata_;
 
     ReqChallenge(Logger &logger, vector<string> const& lines, bool case_sensitivity = false)
-        : ReqBase(logger, lines, case_sensitivity), userinfo_(0)
+        : ReqBase(logger, lines, case_sensitivity), userinfo_(0), have_testdata_(false)
     {
         logger_.Info("挑战请求...");
         request_ = RTChallenge;   
@@ -145,6 +152,11 @@ struct ReqChallenge : public ReqBase
     virtual ~ReqChallenge() 
     {
         delete userinfo_;
+    }
+
+    virtual string Name() const
+    {
+        return "挑战请求";
     }
 
     virtual bool Parse()
@@ -261,20 +273,26 @@ struct ReqChallenge : public ReqBase
 
         CertMgr::instance().AddChallengeCode(*userinfo_, challengecode);
         
-        //"ReturnCode=0\r\n"
-        //"ChallengeCode=";
-        //[optional segment]"Redirect=RedirectDescriptor\r\n"
-        //"Mac=%s\r\n";
+        //[ok/failed]"ReturnCode=retcode\r\n"
+        //[ok]"ChallengeCode=";
+        //[failed optional]"Redirect=RedirectDescriptor\r\n"
+        //[ok/failed]"Mac=%s\r\n";
         string ret;
 
+        string retcode = ok ? "0" : "1";
         //return code. default is 0->successful.
-        ret += "ReturnCode=0\r\n";
-               
-        //challenge code 
-        ret += "ChallengeCode=";
-        ByteStream ccode_desc_bs = PT_ChallengeCodeDescriptor(ccode).Serialize();
-        ret += ccode_desc_bs.DumpHex(ccode_desc_bs.Size());
+        ret += "ReturnCode="; 
+        ret += retcode;
         ret += "\r\n";
+               
+
+        if (ok) {
+            //challenge code 
+            ret += "ChallengeCode=";
+            ByteStream ccode_desc_bs = PT_ChallengeCodeDescriptor(ccode).Serialize();
+            ret += ccode_desc_bs.DumpHex(ccode_desc_bs.Size());
+            ret += "\r\n";
+        }
 
         //test data [optional segment]
         if (have_testdata_) {
@@ -318,6 +336,11 @@ struct ReqGetCert : public ReqBase
     {
         logger_.Info("获取证书请求...");
         request_ = RTGetCert;
+    }
+
+    virtual string Name() const
+    {
+        return "获取证书请求";
     }
 
     virtual bool Parse()
@@ -471,8 +494,11 @@ struct ReqGetCert : public ReqBase
     {
         vector<uint8_t> ccode = CertMgr::instance().GetChallengeCode(*userinfo_);
         if (ccode.size() == 0) {
-            logger_.Warn("获取证书请求，挑战码验证失败，找不到该用户的挑战码");
-            return false;
+            if (have_challenge_) {
+                logger_.Warn("获取证书请求，挑战码验证失败，找不到该用户的挑战码");
+                return false;
+            }
+            return true;
         }
 
         ByteStream ccodebs = challenge_desc_.challenge_code_;
@@ -492,11 +518,11 @@ struct ReqGetCert : public ReqBase
     virtual string MakeResponse(bool ok)
     {
         //ReturnCode=0\r\n
-        //EncryptData=被加密数据的十六进制字符串
+        //EncryptData=被加密数据的十六进制字符串\r\n
         //PublicEncrypt=PublicEncryptDescriptor\r\n 
-        //Redirect=RedirectDescriptor[failed optional]
-        //TestData=TestDataDescriptor[optional]
-        //Mac=MacDescriptor[failed ]
+        //Redirect=RedirectDescriptor\r\n [failed optional]
+        //TestData=TestDataDescriptor\r\n [optional]
+        //Mac=MacDescriptor\r\n [failed ]
         
         //"ReturnCode=0\r\n"
         //[ok]"EncryptData=";
@@ -514,7 +540,6 @@ struct ReqGetCert : public ReqBase
         if (ok) {
             UserCert *usercert = 
                 CertMgr::instance().GenerateCert(*userinfo_, userinfo_desc_.user_info_);
-
 
             PT_UserCertDataDescriptor certdata_desc(usercert->getStream());
             PT_RootKeyDescriptor rootkey_desc(CertMgr::GenerateRootKey(*userinfo_));
@@ -551,7 +576,6 @@ struct ReqGetCert : public ReqBase
         }
         
         return ret;
-
     }
 };
 
@@ -572,6 +596,11 @@ struct ReqGetEntryAddr : public ReqBase
     {
         logger_.Info("获取接入地址请求...");
         request_ = RTGetEntryAddr;
+    }
+
+    virtual string Name() const
+    {
+        return "获取接入地址请求";
     }
 
     virtual ~ReqGetEntryAddr()

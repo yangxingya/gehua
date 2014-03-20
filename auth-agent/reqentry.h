@@ -66,12 +66,6 @@ struct RequestEntry
             return;
         }
 
-        if (!request_->Parse()) {
-            delete request_;
-            request_ = 0;
-            return;
-        }
-
         ca_id = userid;
         valid_ = true;
     }
@@ -94,7 +88,19 @@ struct RequestEntry
         if (request_ == NULL)
             return "";
 
-        return request_->MakeResponse(request_->Valid());
+        bool parseok = request_->Parse();
+        if (parseok)
+            logger_.Info("%s请求，解析成功", request_->Name().c_str());
+        else
+            logger_.Warn("%s请求，解析失败", request_->Name().c_str());
+
+        bool validok = request_->Valid();
+        if (validok)
+            logger_.Info("%s请求，验证成功", request_->Name().c_str());
+        else
+            logger_.Warn("%s请求，验证失败", request_->Name().c_str());
+
+        return request_->MakeResponse(parseok && validok);
     }
 
     bool valid() const { return valid_; }

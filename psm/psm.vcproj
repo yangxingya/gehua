@@ -363,10 +363,6 @@
 			</File>
 		</Filter>
 		<Filter
-			Name="certmgr"
-			>
-		</Filter>
-		<Filter
 			Name="businesslogic"
 			>
 			<File

@@ -87,9 +87,9 @@ int main()
                             conn.c_str(),
                             rescontent.length(),
                             rescontent.c_str());
-            g_logger.Info("FastCGI Printf return code: %d context: %s!", writed, rescontent.c_str());
-            FCGX_FFlush(request.out);
-            FCGX_FClose(request.out);
+            g_logger.Info("FastCGI Printf return code: %d context: \n\t%s!", writed, rescontent.c_str());
+            //FCGX_FFlush(request.out);
+            //FCGX_FClose(request.out);
         } while (false);  
     }
     //FCGX_Finish_r(&request);
