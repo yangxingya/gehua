@@ -1,13 +1,14 @@
 #ifndef WORK_DEF_H_
 #define WORK_DEF_H_
 
-#include "cpplib/workqueue.h"
-#include "protocol/protocol_v2_pb_message.h"
-#include "protocol/protocol_v2_pt_message.h"
-#include "businesslogic/businesspool.h"
-#include "cpplib/timetool.h"
+#include <cpplib/workqueue.h>
+#include <cpplib/stringtool.h>
+#include <cpplib/timetool.h>
+#include <protocol/protocol_v2_pb_message.h>
+#include <protocol/protocol_v2_pt_message.h>
 #include "tcpserver/busiconnection.h"
 #include "tcpserver/termconnection.h"
+#include "businesslogic/businesspool.h"
 #include "work_svc_apply.h"
 
 #define  RC_SUCCESS                    0x00000000	//成功
@@ -39,17 +40,21 @@
 #define  PS_RC_MSG_ID_ERROR            0xA1010002	//消息ID不支持
 #define  PS_RC_SEQUENCENO_ERROR        0xA10A0021	//交易流水号错误
 
+
 /**
  * @brief  处理器的工作项基础结构
  */
 struct PSMWork : public DelayedWork
 {
-    double          work_start_time_;
-    TermSession     *session_info_;
+    double                work_start_time_;
+    weak_ptr<TermSession> session_info_;
+
+    string                work_name_;
+    char                  log_header_[300]; 
+
 
     PSMWork()
     {
-        session_info_ = NULL;
         work_start_time_ = timetool::get_up_time();
     }
 };
@@ -72,15 +77,8 @@ struct TRequestWork_Login : public PSMWork
         Login_End
     } run_step_;
 
-    TRequestWork_Login()
-    {
-        pkg_        = NULL;
-        run_step_   = Login_Begin;
-    }
-    ~TRequestWork_Login()
-    {
-        if ( pkg_ != NULL )  delete pkg_;
-    }
+    TRequestWork_Login(PtLoginRequest *pkg, weak_ptr<TermSession> session_info, void *psm_context);
+    ~TRequestWork_Login();
 
     static void Func_Begin(Work *work);
     static void Func_End(Work *work);
@@ -99,15 +97,8 @@ struct TRequestWork_Logout : public PSMWork
         Logout_End
     } run_step_;
 
-    TRequestWork_Logout()
-    {
-        pkg_        = NULL;
-        run_step_   = Logout_Begin;
-    }
-    ~TRequestWork_Logout()
-    {
-        if ( pkg_ != NULL )  delete pkg_;
-    }
+    TRequestWork_Logout(PtLogoutRequest *pkg, weak_ptr<TermSession> session_info, void *psm_context);
+    ~TRequestWork_Logout();
 
     static void Func_Begin(Work *work);
     static void Func_End(Work *work);
@@ -125,15 +116,8 @@ struct TRequestWork_Heartbeat : public PSMWork
         Heartbeat_End
     } run_step_;
 
-    TRequestWork_Heartbeat()
-    {
-        pkg_ = NULL;
-        run_step_ = Heartbeat_Begin;
-    }
-    ~TRequestWork_Heartbeat()
-    {
-        if ( pkg_ != NULL )  delete pkg_;
-    }
+    TRequestWork_Heartbeat(PtHeartbeatRequest *pkg, weak_ptr<TermSession> session_info, void *psm_context);
+    ~TRequestWork_Heartbeat();
 
 
     static void Func_Begin(Work *work);
@@ -152,15 +136,8 @@ struct TRequestWork_StatusQuery : public PSMWork
         StatusQuery_End
     } run_step_;
 
-    TRequestWork_StatusQuery()
-    {
-        pkg_ = NULL;
-        run_step_ = StatusQuery_Begin;
-    }
-    ~TRequestWork_StatusQuery()
-    {
-        if ( pkg_ != NULL )  delete pkg_;
-    }
+    TRequestWork_StatusQuery(PtStatusQueryRequest *pkg, weak_ptr<TermSession> session_info, void *psm_context);
+    ~TRequestWork_StatusQuery();
 
     static void Func_Begin(Work *work);
     static void Func_End(Work *work);
@@ -178,15 +155,8 @@ struct TRequestWork_GetSvcGroup : public PSMWork
         GetSvcGroup_End
     } run_step_;
 
-    TRequestWork_GetSvcGroup()
-    {
-        pkg_ = NULL;
-        run_step_ = GetSvcGroup_Begin;
-    }
-    ~TRequestWork_GetSvcGroup()
-    {
-        if ( pkg_ != NULL )  delete pkg_;
-    }
+    TRequestWork_GetSvcGroup(PtGetSvcGroupRequest *pkg, weak_ptr<TermSession> session_info, void *psm_context);
+    ~TRequestWork_GetSvcGroup();
 
     static void Func_Begin(Work *work);
     static void Func_End(Work *work);

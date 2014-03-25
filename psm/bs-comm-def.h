@@ -5,13 +5,7 @@
 #if !defined gehua_business_common_define_h_
 #define gehua_business_common_define_h_
 
-#include <string>
-
-#ifdef _MSC_VER
 #include <cpplib/cpplibbase.h>
-#endif // _MSC_VER
-
-using ::std::string;
 
 /**
  * @brief  协议头定义

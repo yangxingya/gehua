@@ -1,6 +1,6 @@
 /*
- * @brief: request 
- */
+* @brief: request 
+*/
 
 #if !defined gehua_auth_agent_request_h_
 #define gehua_auth_agent_request_h_
@@ -49,7 +49,7 @@ struct ReqBase
         string::size_type pos;
         logger_.Info("开始解析-------------------------------");
         for (size_t i = 0; i < lines.size(); ++i) {
-            logger_.Info("第%d行：%s", i + 1, lines[i].c_str());
+            logger_.Trace("第%d行：%s", i + 1, lines[i].c_str());
             if ((pos = lines[i].find_first_of("=")) != string::npos) {
                 string key = lines[i].substr(0, pos);
                 if (!case_sensitivity_)
@@ -65,10 +65,10 @@ struct ReqBase
                     if (pos == suffix.length() - 1)
                         suffix = suffix.substr(0, suffix.length() - 2);
                 lines_[key] = suffix;
-                logger_.Info("\t解析结果[%s] = %s", key.c_str(), suffix.c_str());
+                logger_.Trace("\t解析结果[%s] = %s", key.c_str(), suffix.c_str());
             }
         }
-        logger_.Info("解析完毕-------------------------------");
+        logger_.Trace("解析完毕-------------------------------");
     }
 
     virtual ~ReqBase() {}
@@ -174,7 +174,7 @@ struct ReqChallenge : public ReqBase
         }
 
         map<string, string>::iterator it;
-        
+
         // odc lib desc.
         if ((it = lines_.find(odclibpfx)) == lines_.end()) {
             logger_.Warn("挑战请求，找不到OdcLib=...行，解析失败");
@@ -247,7 +247,7 @@ struct ReqChallenge : public ReqBase
             logger_.Warn("挑战请求，解析MacDescriptor失败");
             return false;
         }
-        
+
         return true;
     }
 
@@ -259,20 +259,8 @@ struct ReqChallenge : public ReqBase
     virtual string MakeResponse(bool ok)
     {
         // generate challenge code descriptor.
-        ByteStream ccode;
-        ccode.SetByteOrder(NETWORK_BYTEORDER);
 
-        string cardid = userinfo_ != NULL ? userinfo_->card_id : "12345678";
-        CertMgr::GenerateChallengeCode(cardid, ccode);
 
-        vector<uint8_t> challengecode;
-        ByteStream tmpccode = ccode;
-
-        challengecode.resize(tmpccode.Size());
-        tmpccode.Get(&challengecode[0], tmpccode.Size());
-
-        CertMgr::instance().AddChallengeCode(*userinfo_, challengecode);
-        
         //[ok/failed]"ReturnCode=retcode\r\n"
         //[ok]"ChallengeCode=";
         //[failed optional]"Redirect=RedirectDescriptor\r\n"
@@ -284,12 +272,25 @@ struct ReqChallenge : public ReqBase
         ret += "ReturnCode="; 
         ret += retcode;
         ret += "\r\n";
-               
+
 
         if (ok) {
+            ByteStream ccode;
+            ccode.SetByteOrder(NETWORK_BYTEORDER);
+
+            string cardid = userinfo_ != NULL ? userinfo_->card_id : "12345678";
+            CertMgr::GenerateChallengeCode(cardid, ccode);
+
+            vector<uint8_t> challengecode;
+            ByteStream tmpccode = ccode;
+
+            challengecode.resize(tmpccode.Size());
+            tmpccode.Get(&challengecode[0], tmpccode.Size());
+
+            CertMgr::instance().AddChallengeCode(*userinfo_, challengecode);
             //challenge code 
             ret += "ChallengeCode=";
-            ByteStream ccode_desc_bs = PT_ChallengeCodeDescriptor(ccode).Serialize();
+            ByteStream ccode_desc_bs = PT_ChallengeCodeDescriptor(ccode).SerializeFull();
             ret += ccode_desc_bs.DumpHex(ccode_desc_bs.Size());
             ret += "\r\n";
         }
@@ -297,13 +298,13 @@ struct ReqChallenge : public ReqBase
         //test data [optional segment]
         if (have_testdata_) {
             ret += "TestData=";
-            ByteStream testdata_desc_bs = testdata_desc_.Serialize();
+            ByteStream testdata_desc_bs = testdata_desc_.SerializeFull();
             ret += testdata_desc_bs.DumpHex(testdata_desc_bs.Size());
             ret += "\r\n";
         }
-        
+
         ret += "Mac=";
-        ByteStream mac_desc_bs = mac_desc_.Serialize();
+        ByteStream mac_desc_bs = mac_desc_.SerializeFull();
         ret += mac_desc_bs.DumpHex(mac_desc_bs.Size());
         ret += "\r\n";
 
@@ -318,7 +319,7 @@ struct ReqGetCert : public ReqBase
     PT_UserPublicKeyDescriptor userpubkey_desc_;
     PT_TestDataDescriptor      testdata_desc_;
     PT_ChallengeCodeDescriptor challenge_desc_;
-    
+
     MacDescriptor              mac_desc_;
     MacPasswordDescriptor      macpasswd_desc_;
 
@@ -326,7 +327,7 @@ struct ReqGetCert : public ReqBase
     bool                       have_testdata_;
     bool                       is_mac_desc_;
     UserInfo                   *userinfo_;
-    
+
     ReqGetCert(Logger &logger, vector<string> const& lines, bool case_sensitivity = false)
         : ReqBase(logger, lines, case_sensitivity)
         , have_challenge_(false)
@@ -362,7 +363,7 @@ struct ReqGetCert : public ReqBase
         }
 
         map<string, string>::iterator it;
-        
+
         // odc lib desc.
         if ((it = lines_.find(odclibpfx)) == lines_.end()) {
             logger_.Warn("获取证书，找不到OdcLib=...行，解析失败");
@@ -436,7 +437,7 @@ struct ReqGetCert : public ReqBase
                 logger_.Warn("获取证书，解析可选ChallengeCodeDescriptor失败");
                 return false;
             }
-        
+
             have_challenge_ = true;
         }
 
@@ -486,7 +487,7 @@ struct ReqGetCert : public ReqBase
         default:
             return false;
         }
-        
+
         return true;
     }
 
@@ -501,17 +502,27 @@ struct ReqGetCert : public ReqBase
             return true;
         }
 
+        if (!have_challenge_) {
+            logger_.Warn("获取证书请求，挑战码验证失败，当前挑战码描述符不存在");
+            return false;
+        }
+
         ByteStream ccodebs = challenge_desc_.challenge_code_;
+        if (ccodebs.Size() == 0) {
+            logger_.Warn("获取证书请求，挑战码验证失败，当前挑战码为空");
+            return false;
+        }
+
         vector<uint8_t> reqccode;
         reqccode.resize(ccodebs.Size());
-
-        ccodebs.Get(&reqccode[0], ccodebs.Size());
 
         if (ccode.size() != reqccode.size()) {
             logger_.Warn("获取证书请求，挑战码验证失败，挑战码与原来的挑战码大小不一致");
             return false;
         }
-        
+
+        ccodebs.Get(&reqccode[0], ccodebs.Size());  
+
         return !memcmp(&ccode[0], &reqccode[0], reqccode.size());
     }
 
@@ -523,9 +534,9 @@ struct ReqGetCert : public ReqBase
         //Redirect=RedirectDescriptor\r\n [failed optional]
         //TestData=TestDataDescriptor\r\n [optional]
         //Mac=MacDescriptor\r\n [failed ]
-        
+
         //"ReturnCode=0\r\n"
-        //[ok]"EncryptData=";
+        //[ok]"EncryptData=UserCertData=xxx&RootKey=xxx\r\n";
         //[ok]"PublicEncrypt=PublicEncryptDescriptor\r\n"
         //[optional segment]"TestData=TestDataDescriptor\r\n"
         //[failed ]"Mac=MacDescriptor"\r\n"
@@ -539,23 +550,34 @@ struct ReqGetCert : public ReqBase
 
         if (ok) {
             UserCert *usercert = 
-                CertMgr::instance().GenerateCert(*userinfo_, userinfo_desc_.user_info_);
+                CertMgr::instance().GenerateCert(logger_, *userinfo_, userinfo_desc_.user_info_);
 
-            PT_UserCertDataDescriptor certdata_desc(usercert->getStream());
+            ByteStream certdata;
+            certdata.SetByteOrder(NETWORK_BYTEORDER);
+            certdata.PutByteStream16(usercert->getStream());
+            PT_UserCertDataDescriptor certdata_desc(certdata);
             PT_RootKeyDescriptor rootkey_desc(CertMgr::GenerateRootKey(*userinfo_));
 
-            ByteStream certdata_bs = certdata_desc.Serialize();
-            ByteStream rootkey_bs  = rootkey_desc.Serialize();
+            ByteStream certdata_bs = certdata_desc.SerializeFull();
+            ByteStream rootkey_bs  = rootkey_desc.SerializeFull();
             ret += "EncryptData=";
+            
+            // user cert data
+            ret += "UserCertData=";
             ret += certdata_bs.DumpHex(certdata_bs.Size());
-            ret += "\r\n";
+
+            // seperator
+            ret += "&";
+
+            // root key
+            ret += "RootKey=";
             ret += rootkey_bs.DumpHex(rootkey_bs.Size());
             ret += "\r\n";
 
             // PublicEncryptDescriptor
             ret += "PublicEncrypt=";
             uint32_t key_id = 0;
-            ByteStream pubencrypt_bs = PublicEncryptDescriptor(key_id, CertMgr::GeneratePublicEncryptCipherData(*userinfo_)).Serialize();
+            ByteStream pubencrypt_bs = PublicEncryptDescriptor(key_id, CertMgr::GeneratePublicEncryptCipherData(*userinfo_)).SerializeFull();
             ret += pubencrypt_bs.DumpHex(pubencrypt_bs.Size());
             ret += "\r\n";
         }
@@ -563,18 +585,18 @@ struct ReqGetCert : public ReqBase
         //test data [optional segment]
         if (have_testdata_) {
             ret += "TestData=";
-            ByteStream testdata_desc_bs = testdata_desc_.Serialize();
+            ByteStream testdata_desc_bs = testdata_desc_.SerializeFull();
             ret += testdata_desc_bs.DumpHex(testdata_desc_bs.Size());
             ret += "\r\n";
         }
 
         if (!ok) {
             ret += "Mac=";
-            ByteStream mac_bs = mac_desc_.Serialize();
+            ByteStream mac_bs = mac_desc_.SerializeFull();
             ret += mac_bs.DumpHex(mac_bs.Size());
             ret += "\r\n";
         }
-        
+
         return ret;
     }
 };
@@ -630,7 +652,7 @@ struct ReqGetEntryAddr : public ReqBase
         }
 
         map<string, string>::iterator it;
-        
+
 
         // odc lib desc.
         if ((it = lines_.find(odclibpfx)) == lines_.end()) {
@@ -662,10 +684,10 @@ struct ReqGetEntryAddr : public ReqBase
         try {
             usercert_desc_ = Descriptor(usercertbs);
         } catch (...) {
-            logger_.Warn("获取接入地址，解析UserCertDataDescriptor失败");
+            logger_.Warn("获取接入地址，解析UserCertDataDescriptor失败:\n\t%s", it->second.c_str());
             return false;
         }
-       
+
 
         // testdata desc. [optional segment]
         if ((it = lines_.find(testdatapfx)) != lines_.end()) {
@@ -710,13 +732,16 @@ struct ReqGetEntryAddr : public ReqBase
     {
         // get userinfo from usercert
         bool ok;
-        user_cert_ = new UserCert(usercert_desc_.user_cert_data_, ok);
+        usercert_desc_.user_cert_data_.SetByteOrder(NETWORK_BYTEORDER);
+        uint16_t dlen = usercert_desc_.user_cert_data_.GetUint16();
+        logger_.Info("获取接入地址，提取用户证书，长度%d", dlen);
+        user_cert_ = new UserCert(logger_, usercert_desc_.user_cert_data_, ok);
         if (!ok) {
             logger_.Warn("获取接入地址，提取用户证书失败");
             return false;
         }
 
-        return CertMgr::instance().ValidCert(UserInfo(user_cert_->certui_desc_.user_info_), usercert_desc_.user_cert_data_);
+        return CertMgr::instance().ValidCert(UserInfo(user_cert_->certui_desc_.user_info_), *user_cert_);
     }
 
     virtual string MakeResponse(bool ok)
@@ -741,7 +766,7 @@ struct ReqGetEntryAddr : public ReqBase
 
             ret += "EncryptData=";
             ret += "Redirect=";
-            ByteStream bs = PT_RedirectDescriptor("psm://" + psm_addr_).Serialize();
+            ByteStream bs = PT_RedirectDescriptor("psm://" + psm_addr_).SerializeFull();
             ret += bs.DumpHex(bs.Size());
             ret += "\r\n";
 
@@ -750,7 +775,7 @@ struct ReqGetEntryAddr : public ReqBase
             ret += "PublicEncrypt=";
             uint32_t key_id = 0;
             ByteStream pubencrypt_bs = 
-                PublicEncryptDescriptor(key_id, CertMgr::GeneratePublicEncryptCipherData(UserInfo(user_cert_->certui_desc_.user_info_))).Serialize();
+                PublicEncryptDescriptor(key_id, CertMgr::GeneratePublicEncryptCipherData(UserInfo(user_cert_->certui_desc_.user_info_))).SerializeFull();
             ret += pubencrypt_bs.DumpHex(pubencrypt_bs.Size());
             ret += "\r\n";
         }
@@ -758,14 +783,14 @@ struct ReqGetEntryAddr : public ReqBase
         //test data [optional segment]
         if (have_testdata_) {
             ret += "TestData=";
-            ByteStream testdata_desc_bs = testdata_desc_.Serialize();
+            ByteStream testdata_desc_bs = testdata_desc_.SerializeFull();
             ret += testdata_desc_bs.DumpHex(testdata_desc_bs.Size());
             ret += "\r\n";
         }
 
         if (!ok) {
             ret += "Mac=";
-            ByteStream mac_bs = mac_desc_.Serialize();
+            ByteStream mac_bs = mac_desc_.SerializeFull();
             ret += mac_bs.DumpHex(mac_bs.Size());
             ret += "\r\n";
         }

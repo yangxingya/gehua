@@ -6,10 +6,12 @@
 #if !defined gehua_sessionmgr_ca_session_h_
 #define gehua_sessionmgr_ca_session_h_
 
+#include <memory>
 #include <cpplib/cpplibbase.h>
 #include "../../common/widget.h"
 
-using ::std::map;
+using ::std::tr1::weak_ptr;
+using ::std::tr1::shared_ptr;
 
 struct TermConnection;
 struct TimeOutTimer;
@@ -18,13 +20,15 @@ struct CASession
 {
 public:
     CASession(caid_t caid, TimeOutTimer& timeout_timer);
-    void Add(TermSession* terminal_session);
+    void Add(weak_ptr<TermSession> terminal_session);
     void Remove(uint64_t terminal_session_id);
 
     caid_t Id() const { return caid_; }
     size_t termCnt() const { return terminal_session_map_.size(); }
 
-    map<uint64_t, TermSession*> terminal_session_map_;
+    weak_ptr<TermSession> GetSTBTermSession();
+
+    map<uint64_t, weak_ptr<TermSession> > terminal_session_map_;
 private:
     caid_t caid_;
     TimeOutTimer& timeout_timer_;

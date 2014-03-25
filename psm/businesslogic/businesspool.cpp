@@ -5,9 +5,9 @@
 #include "../psmcontext.h"
 
 BusinessPool::BusinessPool(Logger& logger, int thread_cnt)
-    : logger_(logger), wk_pool_(logger, thread_cnt)
+    : psm_ctx_(0)
+    , logger_(logger), wk_pool_(logger, thread_cnt)
     , thread_cnt_(thread_cnt)
-    , psm_ctx_(0)
     , started_(false)
     , global_cnt_(0)
 {
@@ -91,37 +91,37 @@ uint16_t BusinessPool::getCAbytesByCAId(caid_t caid)
     return (uint16_t)((caid & and) >> 48);
 }
 
-TermSession* BusinessPool::GenTermSession(PtLoginRequest *msg, TermConnection *conn)
+weak_ptr<TermSession> BusinessPool::GenTermSession(PtLoginRequest *msg, TermConnection *conn)
 {
     if (!started_) {
         logger_.Warn("PSM Business Pool have stoped, but generate terminal session"); 
-        return 0;
+        return weak_ptr<TermSession>();
     }
 
-    TermSession *ts = new TermSession(logger_, msg, conn);
-    if (!ts->valid()) {
+    shared_ptr<TermSession> sp_ts(new TermSession(logger_, msg, conn));
+    weak_ptr<TermSession> ts(sp_ts);   
+    if (!sp_ts->valid()) {
         // valid failed.
-        delete ts;
         logger_.Warn("PSM Business Pool generate terminal session user cert failure");
-        return NULL;
+        return weak_ptr<TermSession>();
     }
 
     // valid ok.
 
     // generate terminal session id.
-    uint64_t ts_id = genTermSessionId(get_up_time(), global_cnt_++, psm_ctx_->ip_addr(), ts->CAId());
-    logger_.Trace("PSM Business Pool generate terminal session id: "U64T, ts_id);
-    ts->Id(ts_id);
+    uint64_t ts_id = genTermSessionId(get_up_time(), global_cnt_++, psm_ctx_->ip_addr(), sp_ts->CAId());
+    logger_.Trace("PSM Business Pool generate terminal session id: " SFMT64U, ts_id);
+    sp_ts->Id(ts_id);
 
-    CASessionMgr *cs_mgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(ts->Id())];
-    CASession *cs = cs_mgr->FindCASessionById(ts->CAId());
+    CASessionMgr *cs_mgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(sp_ts->Id())];
+    CASession *cs = cs_mgr->FindCASessionById(sp_ts->CAId());
 
     if (cs == NULL) {
-        cs = cs_mgr->Create(ts->CAId());
+        cs = cs_mgr->Create(sp_ts->CAId());
         cs_mgr->Attach(cs);
     }
 
-    ts->ca_session = cs;
+    sp_ts->ca_session_ = cs;
     cs->Add(ts);
 
     //ÉèÖÃSessionÃèÊö·û
@@ -131,15 +131,15 @@ TermSession* BusinessPool::GenTermSession(PtLoginRequest *msg, TermConnection *c
             agreekey.Add((uint8_t*)"\x0F\x0E\x0D\x0C\x0B\x0A\x09\x08\x07\x06\x05\x04\x03\x02\x01\x00",16);
         } 
 
-        ts->session_info_desc.agreement_key_ = agreekey;
-        ts->session_info_desc.session_id_    = ts->Id();
-        ts->session_info_desc.timeout_       = 15;
-        ts->session_info_desc.interval_time_ = 10;
-        ts->session_info_desc.valid_         = true;
+        sp_ts->session_info_desc_.agreement_key_ = agreekey;
+        sp_ts->session_info_desc_.session_id_    = sp_ts->Id();
+        sp_ts->session_info_desc_.timeout_       = 15;
+        sp_ts->session_info_desc_.interval_time_ = 10;
+        sp_ts->session_info_desc_.valid_         = true;
     }
 
     //ÉèÖÃÖÕ¶ËÃèÊö·û
-    ts->terminal_info_desc.session_id_ = ts->Id();
+    sp_ts->terminal_info_desc_.session_id_ = sp_ts->Id();
 
     return ts;
 }
@@ -154,25 +154,26 @@ int BusinessPool::getIdByCAId(caid_t caid)
     return (int)(getCAbytesByCAId(caid) % thread_cnt_);
 }
 
-uint32_t BusinessPool::DelTermSession(TermSession *ts)
+uint32_t BusinessPool::DelTermSession(weak_ptr<TermSession> ts)
 {
-    assert(ts != 0);
+    shared_ptr<TermSession> sp_ts(ts.lock());
+    if (!sp_ts) return 0;
 
-    CASession *cs = ts->ca_session;
+    CASession *cs = sp_ts->ca_session_;
 
     if (cs == NULL) {
         //log.
         return 0;
     }
 
-    cs->Remove(ts->Id());
+    cs->Remove(sp_ts->Id());
 
     uint32_t ret = cs->termCnt();
 
     //if no terminal session in ca session,
     // remove ca session.
     if (cs->termCnt() == 0) {
-        CASessionMgr *cs_mgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(ts->Id())];
+        CASessionMgr *cs_mgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(sp_ts->Id())];
         cs_mgr->Detach(cs->Id());
         cs_mgr->Destory(cs);
     }
@@ -194,17 +195,17 @@ void BusinessPool::Stop()
     started_ = false;
 }
 
-TermSession* BusinessPool::FindTermSessionById(uint64_t ts_id)
+weak_ptr<TermSession> BusinessPool::FindTermSessionById(uint64_t ts_id)
 {
     CASessionMgr *csmgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(ts_id)];
 
     CASession *cs = csmgr->FindCASessionByTermSessionId(ts_id);
-    if (cs == NULL) return NULL;
+    if (cs == NULL) return weak_ptr<TermSession>();
     
-    map<uint64_t, TermSession*>::iterator 
+    map<uint64_t, weak_ptr<TermSession> >::iterator 
         it = cs->terminal_session_map_.find(ts_id);
     if (it == cs->terminal_session_map_.end())
-        return NULL;
+        return weak_ptr<TermSession>();
  
     return it->second;
 }

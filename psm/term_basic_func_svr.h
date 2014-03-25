@@ -32,7 +32,7 @@ public:
     void AddStatusPChangeNotifyWork(TermConnection *conn, PtStatusNotifyRequest *pkg);
     void AddStatusPChangeNotifyWork(TermConnection *conn, PtStatusNotifyResponse *pkg);
 
-    void NotifyAllTerminalStatusPChanged(CASession *ca_session);
+    void NotifyAllTerminalStatusPChanged(CASession *ca_session, uint64_t ignore_session_id);
 
 protected:
 private:

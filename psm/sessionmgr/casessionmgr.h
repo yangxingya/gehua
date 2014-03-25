@@ -6,7 +6,6 @@
 #if !defined gehua_sessionmgr_ca_session_mgr_h_
 #define gehua_sessionmgr_ca_session_mgr_h_
 
-#include <map>
 #include "../../common/widget.h"
 #include "../timeouttimer.h"
 

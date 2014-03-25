@@ -5,15 +5,11 @@
 #if !defined gehua_tcpserver_terminal_connection_h_
 #define gehua_tcpserver_terminal_connection_h_
 
+#include <memory>
 #include <cpplib/logger.h>
-#include <cpplib/netaio/aiobase.h>
-#include <cpplib/netaio/aioconnection.h>
-#include <cpplib/netaio/aioprotocolbase.h>
-#include <cpplib/netaio/aiotcpclient.h>
-#include <cpplib/netaio/aiotcpserver.h>
-#include <cpplib/netaio/aioreceiver.h>
-#include <cpplib/netaio/aiosender.h>
 #include <cpplib/netaio/aiomanager.h>
+
+using ::std::tr1::weak_ptr;
 
 struct PSMContext;
 struct TermSession;
@@ -24,7 +20,6 @@ struct TermConnection : public AioConnection
         : AioConnection(tcp,server)
         , logger_(logger)
         , create_time_(get_up_time()),last_heartbeat_time_(0) 
-        , term_session_(0)
         , timeout_(0), login_(false)
     {
     }
@@ -47,7 +42,8 @@ struct TermConnection : public AioConnection
     double   create_time_;
     double   last_heartbeat_time_;
 
-    TermSession *term_session_;
+    //TermSession *term_session_;
+    weak_ptr<TermSession> term_session_;
 
     int timeout_;
 

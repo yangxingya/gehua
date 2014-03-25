@@ -3,38 +3,46 @@
 #include "termsession.h"
 
 TermSession::TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tconn)
-    : user_info(msg->user_info_desc_.user_info_)
-    , odclib_desc(msg->odclib_desc_)
-    , user_info_desc(msg->user_info_desc_)
-    , cert_data_desc(msg->cert_data_desc_)
-    , terminal_info_desc(msg->terminal_info_desc_)
-    , term_conn(tconn), ca_session(0), valid_(false)
+    : ca_session_(0), term_conn_(tconn)
+    , user_info_(msg->user_info_desc_.user_info_)
+    , odclib_desc_(msg->odclib_desc_)
+    , user_info_desc_(msg->user_info_desc_)
+    , cert_data_desc_(msg->cert_data_desc_)
+    , terminal_info_desc_(msg->terminal_info_desc_)
+    , id_(0),caid_(0),valid_(false)
     , logger_(logger)
 {
     // 描述符合法性验证
-    if ( !odclib_desc.valid_ || !user_info_desc.valid_ || !cert_data_desc.valid_ || !terminal_info_desc.valid_ )
+    if ( !odclib_desc_.valid_ || !user_info_desc_.valid_ || !cert_data_desc_.valid_ || !terminal_info_desc_.valid_ )
     {
         logger_.Error("验证用户登录请求失败，描述符不完整。");
         return;
     }
 
-    if (!user_info.valid()) {
+    // 判断TerminalInfoDescriptor内容的正确性
+    if ( !IsValidTermInfoDesc(terminal_info_desc_) )
+    {
+        logger_.Error("验证用户登录请求失败，TerminalInfoDescriptor内容无效。");
+        return;
+    }
+
+    if (!user_info_.valid()) {
         logger_.Error("PSM Business Pool new TermSession userinfo valid failure");
         return;
     }
 
     logger_.Trace("PSM Business Pool new TermSession userinfo:"
         "\n\tuser id: %s, \n\tcaid: %s, \n\tterminal id: %s, \n\tmac addr: %s", 
-        user_info.id.c_str(), user_info.card_id.c_str(), 
-        user_info.term_id.c_str(), user_info.mac_addr.c_str());
+        user_info_.id.c_str(), user_info_.card_id.c_str(), 
+        user_info_.term_id.c_str(), user_info_.mac_addr.c_str());
 
     //get ca card id.
     bool ok;
-    caid_t caid = to_uint64(user_info.card_id, &ok);
+    caid_t caid = to_uint64(user_info_.card_id, &ok);
     if (!ok) {
         logger_.Error(
             "PSM Business Pool new TermSession convert string(%s) to uint64_t(caid) failure", 
-            user_info.card_id.c_str());
+            user_info_.card_id.c_str());
         return;
     }
 
@@ -50,54 +58,41 @@ void TermSession::UpdateSessionInfo(PB_SvcURLDescriptor &url_desc)
     //更新会话URL信息
     url_desc = url_desc;
 
-    terminal_info_desc.business_url_ = url_desc.url_;
+    terminal_info_desc_.business_url_ = url_desc.url_;
 }
 
-void TermSession::UpdateBackURL( PB_SvcURLDescriptor &url_desc )
+bool TermSession::IsValidTermInfoDesc( PT_TerminalInfoDescriptor term_info_desc )
 {
-    unsigned int stack_size = back_url_stack.size();
-
-    // 如果返回的BackURL为空，则需要设置为上一个业务的URL
-    if ( url_desc.back_url_.empty() ) 
+    // 判断终端类型的正确性
+    switch ( term_info_desc.terminal_class_ )
     {
-        url_desc.back_url_ = GetBackURL(url_desc.url_);
-    }
-
-    back_url_stack.push(url_desc.url_);
-}
-
-string TermSession::GetBackURL( string &curr_apply_url )
-{
-    const char  *tmp_str1 = curr_apply_url.c_str();
-    const char  *tmp_str2 = strchr(tmp_str1, ':');
-    if ( tmp_str2 == NULL )
+    case TerminalSTB:
     {
-        return "";
-    }
-
-    unsigned int len = tmp_str2 - tmp_str1 + 1;
-
-    do 
-    {
-        unsigned int stack_size = back_url_stack.size();
-        if ( stack_size > 0 )
+        if ( term_info_desc.terminal_sub_class_ != STBOneWay && term_info_desc.terminal_sub_class_ != STBTwoWayHD && term_info_desc.terminal_sub_class_ != STBTwoWaySD )
         {
-            string tmp_url = back_url_stack.top();
-
-            if ( tmp_url.size() > len )
-            {
-                if ( strncmp(tmp_url.c_str(), tmp_str1, len) == 0 )
-                {
-                    back_url_stack.pop();
-                    continue;
-                }
-                else
-                {
-                    return tmp_url;
-                }
-            }
+            return false;
         }
-    } while (1);    
+        break;
+    }
+    case TerminalPhone:
+    {
+        if ( term_info_desc.terminal_sub_class_ != PhoneAndriod && term_info_desc.terminal_sub_class_ != PhoneIPhone && term_info_desc.terminal_sub_class_ != PhoneWPhone )
+        {
+            return false;
+        }
+        break;
+    }
+    case TerminalPC:
+    {
+        if ( term_info_desc.terminal_sub_class_ != OSWindows && term_info_desc.terminal_sub_class_ != OSLinux && term_info_desc.terminal_sub_class_ != OSMac )
+        {
+            return false;
+        }
+        break;
+    }
+    default:
+        return false;
+    }
 
-    return "";
+    return true;
 }

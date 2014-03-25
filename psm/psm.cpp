@@ -1,4 +1,5 @@
 #include <cpplib/logger.h>
+#include <cpplib/thread.h>
 #include <cpplib/interruptkeycatcher.h>
 #include <cpplib/exception/exceptioncatcher.h>
 #include "psmcontext.h"
@@ -20,7 +21,9 @@ struct CustomCatchSystemException : public ExceptionCatcher
     }
     virtual void OnExit()
     {
-        WriteException("程序异常退出");
+        g_logger.Flush();
+        g_logger.SetBackgroundRunning(false);
+        WriteException((char*)"Program exit abnormally!");
     }
 };
 
@@ -49,7 +52,7 @@ int main(int argc, char **argv)
     // 开始循环等待命令输入并执行
     while (!InterruptKeyCatcher::Occurred())
     {
-        Sleep(5000);
+        Thread::Sleep(1000);
     }
 
     //
@@ -61,5 +64,9 @@ int main(int argc, char **argv)
     int xx;
     cin >> xx;
 #endif
+
+    g_logger.Flush();
+    g_logger.SetBackgroundRunning(false);
+    g_logger.Info("Program exit normally!");
     return 0;
 }

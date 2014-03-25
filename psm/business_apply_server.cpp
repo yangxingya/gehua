@@ -8,19 +8,36 @@ BusinessApplySvr::BusinessApplySvr( PSMContext *psm_context, unsigned int send_t
 
     http_request_processor_ = new HttpRequstProcessor(psm_context_, send_thread_count_);
 
-    SMItemInfo *item = new SMItemInfo;
-    item->sm_id_        = BSGame;
-    item->sm_name_      = SERVICE_CloudGame;
-    item->sm_addr_      = "127.0.0.1:80";
-    item->suppert_business_list_.insert(SERVICE_CloudGame);
-    sm_suppertsvr_table_[SERVICE_CloudGame] = item;
+    char config_name[100];
+    for ( unsigned int i = 1; i < 100; ++i )
+    {
+        _snprintf(config_name, 99, "sminfo%d", i);
 
-    item = new SMItemInfo;
-    item->sm_id_        = BSVOD;
-    item->sm_name_      = SERVICE_SVOD;
-    item->sm_addr_      = "127.0.0.1:80";
-    item->suppert_business_list_.insert(SERVICE_SVOD);
-    sm_suppertsvr_table_[SERVICE_SVOD] = item;
+        string sm_name      = psm_context_->config_->getOption(config_name, "name");
+        string sm_addr      = psm_context_->config_->getOption(config_name, "addr");
+        string sm_supported = psm_context_->config_->getOption(config_name, "supported");
+
+        if ( !sm_name.empty() && !sm_addr.empty() && !sm_supported.empty() )
+        {
+            SMItemInfo *item = new SMItemInfo;
+            item->sm_id_                    = i;
+            item->sm_name_                  = sm_name;
+            item->sm_addr_                  = sm_addr;
+            item->suppert_business_list_    = stringtool::to_string_list(sm_supported.c_str(), '|', false);
+
+            sm_item_list_.push_back(item);
+
+            list<string>::iterator it = item->suppert_business_list_.begin();
+            for ( ; it != item->suppert_business_list_.end(); it++ )
+            {
+                sm_suppertsvr_table_[it->c_str()] = item;
+            }
+        }
+        else
+        {
+            break;
+        }
+    }
 }
 
 BusinessApplySvr::~BusinessApplySvr()
@@ -28,9 +45,9 @@ BusinessApplySvr::~BusinessApplySvr()
     delete http_request_processor_;
     http_request_processor_ = NULL;
 
-    for ( SMSuppertSvrTable::iterator iter = sm_suppertsvr_table_.begin(); iter != sm_suppertsvr_table_.end(); iter++ )
+    for ( vector<SMItemInfo*>::iterator iter = sm_item_list_.begin(); iter != sm_item_list_.end(); iter++ )
     {
-        delete (iter->second);
+        delete *iter;
     }
 }
 
@@ -74,4 +91,21 @@ BusinessType BusinessApplySvr::GetBusinessType( string service_name )
     }    
 
     return BSPending;
+}
+
+bool BusinessApplySvr::IsValidServieName( string service_name )
+{
+    SMSuppertSvrTable::iterator iter = sm_suppertsvr_table_.find(service_name);
+
+    if ( iter != sm_suppertsvr_table_.end() )
+    {
+        return true;
+    }
+
+    if ( IsPHONEControlSvc(service_name.c_str()) )
+    {
+        return true;
+    }
+
+    return false;
 }

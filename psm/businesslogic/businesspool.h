@@ -6,8 +6,6 @@
 #if !defined gehua_businesslogic_business_pool_h_
 #define gehua_businesslogic_business_pool_h_
 
-#include <vector>
-#include <cpplib/logger.h>
 #include "../../common/widget.h"
 #include "../sessionmgr/casession.h"
 #include "../sessionmgr/casessionmgr.h"
@@ -29,11 +27,11 @@ public:
     void AddWork(Work *wk, caid_t caid);
     void AddDelayedWork(DelayedWork *delay_wk, caid_t caid);
 
-    TermSession* GenTermSession(PtLoginRequest *msg, TermConnection *conn);
+    weak_ptr<TermSession> GenTermSession(PtLoginRequest *msg, TermConnection *conn);
     //return the number of terminal session in the same ca sesssion.
-    uint32_t DelTermSession(TermSession *term_session);
+    uint32_t DelTermSession(weak_ptr<TermSession> term_session);
     CASession* FindCASessionById(caid_t caid);
-    TermSession* FindTermSessionById(uint64_t term_session_id);
+    weak_ptr<TermSession> FindTermSessionById(uint64_t term_session_id);
 
     bool Start();
     void Stop();

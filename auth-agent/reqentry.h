@@ -60,7 +60,11 @@ struct RequestEntry
             request_ = new ReqGetCert(logger_, content);
             break;
         case RTGetEntryAddr:
-            request_ = new ReqGetEntryAddr(logger_, content);
+            {
+                ReqGetEntryAddr *req = new ReqGetEntryAddr(logger_, content);
+                req->SetPSMAddr("192.168.17.163:20002");
+                request_ = req;
+            }
             break;
         case RTUnknown:
             return;

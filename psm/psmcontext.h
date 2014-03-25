@@ -6,6 +6,7 @@
 #if !defined gehua_psm_context_h_
 #define gehua_psm_context_h_
 
+#include "config/config.h"
 #include "tcpserver/termserver.h"
 #include "tcpserver/busiserver.h"
 #include "businesslogic/businesspool.h"
@@ -26,22 +27,36 @@ struct PSMContext
     BusinessApplySvr        *business_apply_svr_;
     SMRequestProcessSvr     *sm_request_process_svr_;
 
+    Config                  *config_;
+
     PSMContext(string const& cfgfile, Logger &logger)
         : term_server_(0)
         , busi_server_(0)
         , busi_pool_(0)
         , logger_(logger)
     {
+        config_ = new Config(logger, cfgfile);
+
         int max_receiver_thread = 64;
         int max_sender_thread = 64;
         aio_mgr_ = new AioManager(max_receiver_thread, max_sender_thread);
         aio_mgr_->SetLogger(&logger);
         
-        term_server_ = new TermServer("*:7687", 4);
+        string term_addr            = config_->getOption("alladdr", "login_addr");
+        string busi_addr            = config_->getOption("alladdr", "bs_addr");
+        string wk_thread_cnt        = config_->getOption("perf",    "work_thread_cnt");
+        string bs_init_thread_cnt   = config_->getOption("perf",    "bs_init_thread_cnt");
+
+        logger_.Info("配置信息：终端TCPServer登录地址:%s", term_addr.c_str());
+        logger_.Info("配置信息：业务TCPServer登录地址:%s", busi_addr.c_str());
+        logger_.Info("配置信息：工作线程数:%s", wk_thread_cnt.c_str());
+        logger_.Info("配置信息：业务初始化处理线程数:%s", bs_init_thread_cnt.c_str());
+
+        term_server_ = new TermServer(term_addr, 4);
         term_server_->AioTcpServer::SetLogger(&logger);
         term_server_->SetLogger(&logger);
 
-        busi_server_ = new BusiServer("*:7688", 4);
+        busi_server_ = new BusiServer(busi_addr, 4);
         busi_server_->AioTcpServer::SetLogger(&logger);
         busi_server_->SetLogger(&logger);
 
@@ -51,7 +66,8 @@ struct PSMContext
 
         logger_.Info("PSM TerminalServer ip: %s", ip_str_.c_str()); 
 
-        busi_pool_ = new BusinessPool(logger, 64);
+        int thread_cnt = to_int(wk_thread_cnt);
+        busi_pool_ = new BusinessPool(logger, thread_cnt);
         
         term_server_->psm_ctx_ = this;
         busi_server_->psm_ctx_ = this;
@@ -59,7 +75,7 @@ struct PSMContext
 
         term_request_process_svr_   = new TermRequestProcessSvr(this);
         term_basic_func_svr_        = new TermBasicFuncSvr(this);
-        business_apply_svr_         = new BusinessApplySvr(this, 10);
+        business_apply_svr_         = new BusinessApplySvr(this, to_int(bs_init_thread_cnt));
         sm_request_process_svr_     = new SMRequestProcessSvr(this);      
     }
 
@@ -74,6 +90,8 @@ struct PSMContext
         delete term_basic_func_svr_;
         delete business_apply_svr_;
         delete sm_request_process_svr_;
+		
+		delete config_;
     }
 
     bool Start()

@@ -5,14 +5,6 @@
 #if !defined gehua_tcpserver_terminal_server_h_
 #define gehua_tcpserver_terminal_server_h_
 
-#include <cpplib/logger.h>
-#include <cpplib/netaio/aiobase.h>
-#include <cpplib/netaio/aioconnection.h>
-#include <cpplib/netaio/aioprotocolbase.h>
-#include <cpplib/netaio/aiotcpclient.h>
-#include <cpplib/netaio/aiotcpserver.h>
-#include <cpplib/netaio/aioreceiver.h>
-#include <cpplib/netaio/aiosender.h>
 #include <cpplib/netaio/aiomanager.h>
 #include "../../common/widget.h"
 #include "termconnection.h"

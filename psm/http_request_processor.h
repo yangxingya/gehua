@@ -2,7 +2,7 @@
 #define HTTP_REQUEST_PROCESSOR_H_
 
 #include "work_def.h"
-#include "ghttp.h"
+#include <libghttp/ghttp.h>
 
 struct PSMContext;
 

@@ -1,11 +1,9 @@
 #include "work_def.h"
 #include "psmcontext.h"
-#include "cpplib/stringtool.h"
-#include "cpplib/timetool.h"
 #include "./sessionmgr/casession.h"
 #include "./sessionmgr/termsession.h"
 
-SMSvcApplyWork::SMSvcApplyWork( AioConnection *conn, PbSvcApplyRequest *pkg, TermSession *self_session_info )
+SMSvcApplyWork::SMSvcApplyWork( AioConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info )
 {
     apply_type_             = SelfSvcApply;
     conn_                   = conn;
@@ -18,10 +16,15 @@ SMSvcApplyWork::SMSvcApplyWork( AioConnection *conn, PbSvcApplyRequest *pkg, Ter
     work_func_              = SMSvcApplyWork::Func_Begin;
 
     work_name_              = "SM终端业务申请-本屏业务";
-    sprintf_s(log_header_, 300, "[%s][CAID=%I64d][Self_SID=%I64d]", work_name_.c_str(), self_session_info->CAId(), self_session_info->Id());
+    //提升引用。
+    shared_ptr<TermSession> sp_session_info(self_session_info_.lock());
+    if (!sp_session_info)
+        _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
+    else 
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
-SMSvcApplyWork::SMSvcApplyWork( AioConnection *conn, PbSvcApplyRequest *pkg, TermSession *self_session_info, TermSession *cross_session_info )
+SMSvcApplyWork::SMSvcApplyWork( AioConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info )
 {
     apply_type_             = CorssSvcApply;
     conn_                   = conn;
@@ -35,7 +38,12 @@ SMSvcApplyWork::SMSvcApplyWork( AioConnection *conn, PbSvcApplyRequest *pkg, Ter
     work_func_              = SMSvcApplyWork::Func_Begin;
 
     work_name_              = "SM终端业务申请-跨屏业务";
-    sprintf_s(log_header_, 300, "[%s][CAID=%I64d][Self_SID=%I64d][Cross_SID=%I64d]", work_name_.c_str(), self_session_info->CAId(), self_session_info->Id(), cross_session_info->Id());
+    //提升引用。
+    shared_ptr<TermSession> sp_session_info(self_session_info_.lock());
+    if (!sp_session_info)
+        _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
+    else 
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
 SMSvcApplyWork::~SMSvcApplyWork()
@@ -74,41 +82,94 @@ void SMSvcApplyWork::Func_Begin( Work *work )
     {
         const char *apply_url = NULL;
         ByteStream apply_desc_buf;
+
+        psm_context->logger_.Trace("%s 检查BackURL，如果为空，则需要补填为上一个本地业务的URL...", svcapply_work->log_header_);
+
         if ( svcapply_work->apply_type_ == TermSvcApplyWork::SelfSvcApply )
         {
             if ( svcapply_work->pkg_->svc_self_apply_desc_.back_url_.empty() )
             {
-                psm_context->logger_.Trace("[%s] 开始处理业务申请请求, 终端业务申请的BackURL为空，需要补为上个业务的URL...", svcapply_work->log_header_);
-                svcapply_work->pkg_->svc_self_apply_desc_.back_url_ = svcapply_work->self_session_info_->GetBackURL(svcapply_work->pkg_->svc_self_apply_desc_.apply_url_);
+                //提升
+                shared_ptr<TermSession> session_info(svcapply_work->self_session_info_.lock());
+                if (session_info) {
+                    psm_context->logger_.Trace("%s 本屏业务申请的BackURL为空，补填为:%s", svcapply_work->log_header_, session_info->last_local_svc_url_.c_str());
+                    svcapply_work->pkg_->svc_self_apply_desc_.back_url_ = session_info->last_local_svc_url_;
+                } else {
+                    //todo:: loggggggg...
+                }
+            }
+            else
+            {
+                string service_name = svcapply_work->GetServiceName(svcapply_work->pkg_->svc_self_apply_desc_.back_url_.c_str());
+                if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+                {
+                    //提升
+                    shared_ptr<TermSession> session_info(svcapply_work->self_session_info_.lock());
+                    if (session_info)
+                        session_info->last_local_svc_url_ = svcapply_work->pkg_->svc_self_apply_desc_.back_url_;
+                }
             }
 
             apply_url       = svcapply_work->pkg_->svc_self_apply_desc_.apply_url_.c_str();
-            apply_desc_buf  = svcapply_work->pkg_->svc_self_apply_desc_.Serialize();
+            apply_desc_buf  = svcapply_work->pkg_->svc_self_apply_desc_.SerializeFull();
         }
         else
         {
             if ( svcapply_work->pkg_->svc_cross_apply_desc_.init_back_url_.empty() )
             {
-                psm_context->logger_.Trace("[%s] 开始处理业务申请请求, 终端业务申请发起方的BackURL为空，需要补为上个业务的URL...", svcapply_work->log_header_);
-                svcapply_work->pkg_->svc_cross_apply_desc_.init_back_url_ = svcapply_work->self_session_info_->GetBackURL(svcapply_work->pkg_->svc_cross_apply_desc_.init_apply_url_);
+                shared_ptr<TermSession> session_info(svcapply_work->self_session_info_.lock());
+                if (session_info) {
+                    psm_context->logger_.Trace("%s 开始处理业务申请请求, 终端业务申请发起方的BackURL为空，需要补为上个业务的URL...", svcapply_work->log_header_);
+                    svcapply_work->pkg_->svc_cross_apply_desc_.init_back_url_ = session_info->last_local_svc_url_;
+                } else {
+                    //todo:: logggggggg...
+                }
             }
+            else
+            {
+                string service_name = svcapply_work->GetServiceName(svcapply_work->pkg_->svc_cross_apply_desc_.init_back_url_.c_str());
+                if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+                {
+                    //提升
+                    shared_ptr<TermSession> sp_session_info(svcapply_work->self_session_info_.lock());
+                    if (sp_session_info)
+                        sp_session_info->last_local_svc_url_ = svcapply_work->pkg_->svc_cross_apply_desc_.init_back_url_;
+                }
+            }
+
             if ( svcapply_work->pkg_->svc_cross_apply_desc_.show_back_url_.empty() )
             {
-                psm_context->logger_.Trace("[%s] 开始处理业务申请请求, 终端业务申请呈现方的BackURL为空，需要补为上个业务的URL...", svcapply_work->log_header_);
-                svcapply_work->pkg_->svc_cross_apply_desc_.show_back_url_ = svcapply_work->cross_session_info_->GetBackURL(svcapply_work->pkg_->svc_cross_apply_desc_.show_apply_url_);
+                shared_ptr<TermSession> session_info(svcapply_work->cross_session_info_.lock());
+                if (session_info) {
+                    psm_context->logger_.Trace("%s 开始处理业务申请请求, 终端业务申请呈现方的BackURL为空，需要补为上个业务的URL...", svcapply_work->log_header_);
+                    svcapply_work->pkg_->svc_cross_apply_desc_.show_back_url_ = session_info->last_local_svc_url_;
+                } else {
+                    //todo:: loggggggg...
+                }
+            }
+            else
+            {
+                string service_name = svcapply_work->GetServiceName(svcapply_work->pkg_->svc_cross_apply_desc_.show_back_url_.c_str());
+                if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+                {
+                    //提升
+                    shared_ptr<TermSession> sp_session_info(svcapply_work->cross_session_info_.lock());
+                    if (sp_session_info)
+                        sp_session_info->last_local_svc_url_ = svcapply_work->pkg_->svc_cross_apply_desc_.show_back_url_;
+                }
             }
 
             apply_url       = svcapply_work->pkg_->svc_cross_apply_desc_.init_apply_url_.c_str();
-            apply_desc_buf  = svcapply_work->pkg_->svc_cross_apply_desc_.Serialize();
+            apply_desc_buf  = svcapply_work->pkg_->svc_cross_apply_desc_.SerializeFull();
         }
 
-        psm_context->logger_.Trace("[%s] 开始处理业务申请请求, 获取协议头...", svcapply_work->log_header_);
+        psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头...", svcapply_work->log_header_);
 
         string service_name = svcapply_work->GetServiceName(apply_url);
 
         if ( psm_context->business_apply_svr_->IsPHONEControlSvc(service_name.c_str()) )
         {
-            psm_context->logger_.Trace("[%s] 开始处理业务申请请求, 获取协议头:%s ,申请的是手机外设业务，则直接返回成功应答.", svcapply_work->log_header_, service_name.c_str());
+            psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头:%s ,申请的是手机外设业务，则直接返回成功应答.", svcapply_work->log_header_, service_name.c_str());
 
             svcapply_work->SendResponed(RC_SUCCESS);
             TermSvcApplyWork::Func_End(work);
@@ -129,7 +190,7 @@ void SMSvcApplyWork::Func_Begin( Work *work )
     } while ( 0 );
 
     // 参数错误，直接给终端应答
-    psm_context->logger_.Trace("%s 处理业务申请请求失败，向终端发送失败应答。", svcapply_work->log_header_);
+    psm_context->logger_.Warn("%s 处理业务申请请求失败，向终端发送失败应答。", svcapply_work->log_header_);
 
     svcapply_work->SendResponed(ret_code);
 
@@ -162,9 +223,9 @@ void SMSvcApplyWork::Func_Inited( Work *work )
 
         //解析描述符
         vector<PB_SvcURLDescriptor>   svc_url_desc_list;
-        PB_KeyMapIndicateDescriptor   keymaping_indicate_desc;
+        PB_KeyMapIndicateDescriptor   sm_keymaping_indicate_desc;
 
-        ret_code = svcapply_work->ParseHttpResponse(svcapply_work->http_request_info_.responed_body_, svc_url_desc_list, keymaping_indicate_desc);
+        ret_code = svcapply_work->ParseHttpResponse(svcapply_work->http_request_info_.responed_body_, svc_url_desc_list, sm_keymaping_indicate_desc);
         if ( ret_code != RC_SUCCESS )
         {
             psm_context->logger_.Warn("%s 处理业务申请请求, 解析接收到SM的应答,解析失败。", svcapply_work->log_header_);
@@ -172,16 +233,40 @@ void SMSvcApplyWork::Func_Inited( Work *work )
             break;
         }
 
-        bool need_send_keymap_indicate = keymaping_indicate_desc.valid_;
+        PT_KeyMapIndicateDescriptor   term_keymaping_indicate_desc;
+        term_keymaping_indicate_desc.dest_session_id_        = sm_keymaping_indicate_desc.session_id_;
+        term_keymaping_indicate_desc.dest_sm_session_id_     = sm_keymaping_indicate_desc.dest_sm_session_id_;
+        term_keymaping_indicate_desc.mapping_protocol_       = sm_keymaping_indicate_desc.mapping_protocol_;
+        term_keymaping_indicate_desc.mapping_server_ip_      = sm_keymaping_indicate_desc.mapping_server_ip_;
+        term_keymaping_indicate_desc.mapping_server_port_    = sm_keymaping_indicate_desc.mapping_server_port_;
+        term_keymaping_indicate_desc.mapping_type_           = 1;
+        term_keymaping_indicate_desc.valid_                  = sm_keymaping_indicate_desc.valid_;
+
+        bool need_send_keymap_indicate = sm_keymaping_indicate_desc.valid_;
         for ( vector<PB_SvcURLDescriptor>::iterator iter = svc_url_desc_list.begin(); iter != svc_url_desc_list.end(); iter++ )
         {
             if ( iter->valid_ )
             {                
-                TermSession *show_term_session = psm_context->busi_pool_->FindTermSessionById(iter->session_id_);
+                weak_ptr<TermSession> wp_show_term_session = psm_context->busi_pool_->FindTermSessionById(iter->session_id_);
+                shared_ptr<TermSession> show_term_session(wp_show_term_session.lock());
                 if ( show_term_session != NULL )
                 {
                     //更新backurl
-                    show_term_session->UpdateBackURL(*iter);
+                    if ( iter->back_url_.empty() )
+                    {
+                        iter->back_url_ = show_term_session->last_local_svc_url_;
+                    }
+                    else
+                    {
+                        string service_name = svcapply_work->GetServiceName(iter->back_url_.c_str());
+                        if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+                        {
+                            //提升
+                            shared_ptr<TermSession> session_info(svcapply_work->self_session_info_.lock());
+                            if (session_info)
+                                session_info->last_local_svc_url_ = iter->back_url_;
+                        }
+                    }
 
                     // 更新终端业务信息
                     show_term_session->UpdateSessionInfo(*iter);
@@ -189,13 +274,13 @@ void SMSvcApplyWork::Func_Inited( Work *work )
                     // 通知呈现端业务切换
                     PtSvcSwitchRequest *svcswitch_request = new PtSvcSwitchRequest;
                     svcswitch_request->svc_url_desc_ = *iter;
-                    if ( need_send_keymap_indicate && (keymaping_indicate_desc.session_id_ == iter->session_id_) )
-                    {
-                        svcswitch_request->keymap_indicate_desc_ = keymaping_indicate_desc;
+                    if ( need_send_keymap_indicate && (sm_keymaping_indicate_desc.session_id_ == iter->session_id_) )
+                    {                       
+                        svcswitch_request->keymap_indicate_desc_ = term_keymaping_indicate_desc;
                         need_send_keymap_indicate                = false;
                     }
 
-                    psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session->term_conn, svcswitch_request);
+                    psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session->term_conn_, svcswitch_request);
                 }
             }
             else
@@ -208,14 +293,15 @@ void SMSvcApplyWork::Func_Inited( Work *work )
         // 按键映射指示需要单独发送
         if ( need_send_keymap_indicate )
         {
-            TermSession *show_term_session = psm_context->busi_pool_->FindTermSessionById(keymaping_indicate_desc.session_id_);
+            weak_ptr<TermSession> wp_show_term_session = psm_context->busi_pool_->FindTermSessionById(term_keymaping_indicate_desc.dest_session_id_);
+            shared_ptr<TermSession> show_term_session(wp_show_term_session.lock());
             if ( show_term_session != NULL )
             {
                 // 通知控制端业务切换
                 PtSvcSwitchRequest *svcswitch_request = new PtSvcSwitchRequest;
-                svcswitch_request->keymap_indicate_desc_ = keymaping_indicate_desc;
+                svcswitch_request->keymap_indicate_desc_ = term_keymaping_indicate_desc;
 
-                psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session->term_conn, svcswitch_request);
+                psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session->term_conn_, svcswitch_request);
             }
         }
     } while ( 0 );
@@ -230,6 +316,9 @@ void SMSvcApplyWork::Func_End( Work *work )
 {
     SMSvcApplyWork *svcapply_work  = (SMSvcApplyWork*)work;
     PSMContext *psm_context      = (PSMContext*)work->user_ptr_;
+
+    if ( psm_context ) {//??????
+    }
 
     svcapply_work->run_step_ = SMSvcApplyWork::SvcApply_End;
 

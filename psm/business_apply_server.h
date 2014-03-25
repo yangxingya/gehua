@@ -1,9 +1,9 @@
 #ifndef BUSINESS_APPLY_SERVER_H_
 #define BUSINESS_APPLY_SERVER_H_
 
-#include "cpplib/stringtool.h"
 #include "sm_config_info.h"
 #include "http_request_processor.h"
+#include <cpplib/stringtool.h>
 
 struct PSMContext;
 
@@ -35,6 +35,8 @@ public:
      */
     bool IsPHONEControlSvc(const char *apply_business_name);
 
+    bool IsValidServieName(string service_name);
+
     /**
      * @brief 添加一个业务初始化请求工作项
      * @param   work  工作项
@@ -42,7 +44,7 @@ public:
     void AddInitRequestWork(SvcApplyWork *work);
 
 private:
-    SMItemArray         sm_array_;
+    vector<SMItemInfo*> sm_item_list_;
     SMSuppertSvrTable   sm_suppertsvr_table_;
 
     PSMContext   *psm_context_;

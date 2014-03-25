@@ -20,18 +20,30 @@ void TermBasicFuncSvr::AddKeyTransmitWork( TermConnection *conn, PtKeyMappingReq
 {
     TRequestWork_KeyMapping *work = new TRequestWork_KeyMapping;
 
+    shared_ptr<TermSession> ts(conn->term_session_.lock());
+    if (!ts) {
+        //todo:: logggg....
+        return;
+    }
+
     work->pkg_              = pkg;
     work->run_step_         = TRequestWork_KeyMapping::KeyMapping_Begin;
     work->session_info_     = conn->term_session_;
     work->work_func_        = TRequestWork_KeyMapping::Func_Begin;
     work->user_ptr_         = psm_context_;
 
-    psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
+    psm_context_->busi_pool_->AddWork(work, ts->CAId());
 }
 
 void TermBasicFuncSvr::AddSvcSwitchNotifyWork( TermConnection *conn, PtSvcSwitchRequest *pkg )
 {
     TNotifyWork_SvcSwitch *work = new TNotifyWork_SvcSwitch;
+
+    shared_ptr<TermSession> ts(conn->term_session_.lock());
+    if (!ts) {
+        //todo:: logggg....
+        return;
+    }
 
     work->pkg_              = pkg;
     work->run_step_         = TNotifyWork_SvcSwitch::SvcSwitch_Begin;
@@ -39,7 +51,7 @@ void TermBasicFuncSvr::AddSvcSwitchNotifyWork( TermConnection *conn, PtSvcSwitch
     work->work_func_        = TNotifyWork_SvcSwitch::Func_Begin;
     work->user_ptr_         = psm_context_;
 
-    psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
+    psm_context_->busi_pool_->AddWork(work, ts->CAId());
 }
 
 void TermBasicFuncSvr::AddSvcSwitchNotifyWork( TermConnection *conn, PtSvcSwitchResponse *pkg )
@@ -53,13 +65,19 @@ void TermBasicFuncSvr::AddStatusPChangeNotifyWork( TermConnection *conn, PtStatu
 {
     TNotifyWork_StatusNotify *work = new TNotifyWork_StatusNotify;
 
+    shared_ptr<TermSession> ts(conn->term_session_.lock());
+    if (!ts) {
+        //todo:: logggg....
+        return;
+    }
+
     work->pkg_              = pkg;
     work->run_step_         = TNotifyWork_StatusNotify::StatusNotify_Begin;
     work->session_info_     = conn->term_session_;
     work->work_func_        = TNotifyWork_StatusNotify::Func_Begin;
     work->user_ptr_         = psm_context_;
 
-    psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
+    psm_context_->busi_pool_->AddWork(work, ts->CAId());
 }
 
 void TermBasicFuncSvr::AddStatusPChangeNotifyWork( TermConnection *conn, PtStatusNotifyResponse *pkg )
@@ -69,22 +87,31 @@ void TermBasicFuncSvr::AddStatusPChangeNotifyWork( TermConnection *conn, PtStatu
     return;
 }
 
-void TermBasicFuncSvr::NotifyAllTerminalStatusPChanged( CASession *ca_session )
+void TermBasicFuncSvr::NotifyAllTerminalStatusPChanged( CASession *ca_session, uint64_t ignore_session_id )
 {
     PtStatusNotifyRequest notify_request;
-    map<uint64_t, TermSession*>::iterator iter = ca_session->terminal_session_map_.begin();
+    map<uint64_t, weak_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
     for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
     {
-        notify_request.terminal_list_desc_.push_back(iter->second->terminal_info_desc);
+        shared_ptr<TermSession> it_ts(iter->second.lock());
+        if (it_ts)
+            notify_request.terminal_list_desc_.push_back(it_ts->terminal_info_desc_);
     }
 
     // add notify work.
     for ( iter = ca_session->terminal_session_map_.begin(); iter != ca_session->terminal_session_map_.end(); iter++ )
     {
+        shared_ptr<TermSession> it_ts(iter->second.lock());
+        if (!it_ts) continue;
+        if ( ignore_session_id == it_ts->Id() )
+        {
+            continue;
+        }
+
         PtStatusNotifyRequest *tmp = new PtStatusNotifyRequest;
         tmp->terminal_list_desc_ = notify_request.terminal_list_desc_;
 
-        AddStatusPChangeNotifyWork(iter->second->term_conn, tmp);
+        AddStatusPChangeNotifyWork(it_ts->term_conn_, tmp);
     }
 }
 
@@ -95,27 +122,35 @@ void TRequestWork_KeyMapping::Func_Begin( Work *work )
     TRequestWork_KeyMapping *keymapping_work  = (TRequestWork_KeyMapping*)work;
     PSMContext *psm_context                   = (PSMContext*)work->user_ptr_;
 
+    shared_ptr<TermSession> kmap_ts(keymapping_work->session_info_.lock());
+    if (!kmap_ts) {
+        //todo:: logggggg...
+        return;
+    }
+
     keymapping_work->run_step_ = TRequestWork_KeyMapping::KepMapping_Transpond;
 
     //get target terminal info.
-    map<uint64_t, TermSession*>::iterator iter = keymapping_work->session_info_->ca_session->terminal_session_map_.find(keymapping_work->pkg_->key_mapping_desc_.dest_session_id_);
-    if ( iter != keymapping_work->session_info_->ca_session->terminal_session_map_.end() )
+    map<uint64_t, weak_ptr<TermSession> >::iterator iter = kmap_ts->ca_session_->terminal_session_map_.find(keymapping_work->pkg_->key_mapping_desc_.dest_session_id_);
+    if ( iter != kmap_ts->ca_session_->terminal_session_map_.end() )
     {
         //transpond to target terminal.
-
+        shared_ptr<TermSession> it_ts(iter->second.lock());
+        if (!it_ts) continue;
+        
         PtKeyMappingResponse keymapping_response;
         keymapping_response.Add(keymapping_work->pkg_->key_mapping_desc_);
 
         ByteStream responed_pkg = keymapping_response.Serialize();
 
-        psm_context->logger_.Trace("[键值映射请求][CAID=%I64d][SID=%I64d] 向指定终端[SID=%I64d]转发键值映射请求。 长度：%d  内容：\n%s", 
-                                    keymapping_work->session_info_->CAId(), keymapping_work->session_info_->Id(),
-                                    iter->second->Id(),
+        psm_context->logger_.Trace("[键值映射请求][CAID=" SFMT64U "][SID=" SFMT64U "] 向指定终端[SID=" SFMT64U "]转发键值映射请求。 长度：%d  内容：\n%s", 
+                                    kmap_ts->CAId(), kmap_ts->Id(),
+                                    it_ts->Id(),
                                     responed_pkg.Size(),
                                     stringtool::to_hex_string((const char*)responed_pkg.GetBuffer(), responed_pkg.Size()).c_str());
 
 
-        iter->second->term_conn->Write(responed_pkg.GetBuffer(), responed_pkg.Size());
+        it_ts->term_conn_->Write(responed_pkg.GetBuffer(), responed_pkg.Size());
     }
 
     TRequestWork_StatusQuery::Func_End(work);
@@ -125,6 +160,9 @@ void TRequestWork_KeyMapping::Func_End( Work *work )
 {
     TRequestWork_KeyMapping *keymapping_work  = (TRequestWork_KeyMapping*)work;
     PSMContext *psm_context                   = (PSMContext*)work->user_ptr_;
+
+    if ( psm_context ) {//??????
+    }
 
     keymapping_work->run_step_ = TRequestWork_KeyMapping::KeyMapping_End;
 
@@ -138,6 +176,9 @@ void TNotifyWork_SvcSwitch::Func_Begin( Work *work )
     TNotifyWork_SvcSwitch *svcswitch_work  = (TNotifyWork_SvcSwitch*)work;
     PSMContext *psm_context                = (PSMContext*)work->user_ptr_;
 
+    if ( psm_context ) {//??????
+    }
+
     // send notify to terminal.
     svcswitch_work->run_step_ = TNotifyWork_SvcSwitch::SvcSwitch_SendNotify;   
 
@@ -146,12 +187,12 @@ void TNotifyWork_SvcSwitch::Func_Begin( Work *work )
 
     ByteStream bs = svcswitch_work->pkg_->Serialize();
 
-    psm_context->logger_.Trace("[业务切换通知][CAID=%I64d][SID=%I64d] 向终端发送业务切换通知。 长度：%d  内容：\n%s", 
+    psm_context->logger_.Trace("[业务切换通知][CAID=" SFMT64U "][SID=" SFMT64U "] 向终端发送业务切换通知。 长度：%d  内容：\n%s", 
                                 svcswitch_work->session_info_->CAId(), svcswitch_work->session_info_->Id(),
                                 bs.Size(),
                                 stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
 
-    if ( svcswitch_work->session_info_->term_conn->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
+    if ( svcswitch_work->session_info_->term_conn_->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
     {
         // add responed process work.
 //         svcswitch_work->work_func_   = TNotifyWork_StatusNotify::Func_ProcessResponed; 
@@ -168,6 +209,9 @@ void TNotifyWork_SvcSwitch::Func_End( Work *work )
 {
     TNotifyWork_SvcSwitch *svcswitch_work  = (TNotifyWork_SvcSwitch*)work;
     PSMContext *psm_context                = (PSMContext*)work->user_ptr_;
+
+    if ( psm_context ) {//??????
+    }
 
     // if recvice responed failed.
     if ( !svcswitch_work->recv_responed_sucess_ )
@@ -187,6 +231,9 @@ void TNotifyWork_StatusNotify::Func_Begin( Work *work )
     TNotifyWork_StatusNotify *statusnotify_work  = (TNotifyWork_StatusNotify*)work;
     PSMContext *psm_context                      = (PSMContext*)work->user_ptr_;
 
+    if ( psm_context ) {//??????
+    }
+
     // send notify to terminal.
     statusnotify_work->run_step_ = TNotifyWork_StatusNotify::StatusNotify_SendNotify;
 
@@ -198,12 +245,12 @@ void TNotifyWork_StatusNotify::Func_Begin( Work *work )
 
     ByteStream bs = statusnotify_work->pkg_->Serialize();
 
-    psm_context->logger_.Trace("[状态变更通知][CAID=%I64d][SID=%I64d] 向终端发送状态变更通知。 长度：%d  内容：\n%s", 
+    psm_context->logger_.Trace("[状态变更通知][CAID=" SFMT64U "][SID=" SFMT64U "] 向终端发送状态变更通知。 长度：%d  内容：\n%s", 
                                 statusnotify_work->session_info_->CAId(), statusnotify_work->session_info_->Id(),
                                 bs.Size(),
                                 stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
 
-    if ( statusnotify_work->session_info_->term_conn->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
+    if ( statusnotify_work->session_info_->term_conn_->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
     {
         // and responed process work.
         //         statusnotify_work->work_func_   = TNotifyWork_StatusNotify::Func_ProcessResponed; 
@@ -221,10 +268,12 @@ void TNotifyWork_StatusNotify::Func_End( Work *work )
     TNotifyWork_StatusNotify *statusnotify_work  = (TNotifyWork_StatusNotify*)work;
     PSMContext *psm_context                      = (PSMContext*)work->user_ptr_;
 
+    if ( psm_context ) {//??????
+    }
+
     // if recvice responed failed.
     if ( !statusnotify_work->recv_responed_sucess_ )
     {
-
     }
 
     statusnotify_work->run_step_ = TNotifyWork_StatusNotify::StatusNotify_End;

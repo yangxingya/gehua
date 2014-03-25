@@ -1,5 +1,5 @@
+#include <cpplib/stringtool.h>
 #include "term_request_process_svr.h"
-#include "cpplib/stringtool.h"
 #include "psmcontext.h"
 #include "sessionmgr/termsession.h"
 #include "sessionmgr/casession.h"
@@ -21,41 +21,20 @@ void TermRequestProcessSvr::GetUserInfoParam( string &user_info_str, map<string,
 }
 
 void TermRequestProcessSvr::AddLoginRequestWork( TermConnection *conn, PtLoginRequest *pkg )
-{    
-    TRequestWork_Login *work = new TRequestWork_Login;
-
-    work->pkg_              = pkg;
-    work->run_step_         = TRequestWork_Login::Login_Begin;
-    work->session_info_     = conn->term_session_;
-    work->work_func_        = TRequestWork_Login::Func_Begin;
-    work->user_ptr_         = psm_context_;
-
+{
+    TRequestWork_Login *work = new TRequestWork_Login(pkg, conn->term_session_, psm_context_);
     psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
 }
 
 void TermRequestProcessSvr::AddLogoutRequestWork( TermConnection *conn, PtLogoutRequest *pkg )
 {
-    TRequestWork_Logout *work = new TRequestWork_Logout;
-
-    work->pkg_              = pkg;
-    work->run_step_         = TRequestWork_Logout::Logout_Begin;
-    work->session_info_     = conn->term_session_;
-    work->work_func_        = TRequestWork_Logout::Func_Begin;
-    work->user_ptr_         = psm_context_;
-
+    TRequestWork_Logout *work = new TRequestWork_Logout(pkg, conn->term_session_, psm_context_);
     psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
 }
 
 void TermRequestProcessSvr::AddHeartbeatWork( TermConnection *conn, PtHeartbeatRequest *pkg )
 {
-    TRequestWork_Heartbeat *work = new TRequestWork_Heartbeat;
-
-    work->pkg_              = pkg;
-    work->run_step_         = TRequestWork_Heartbeat::Heartbeat_Begin;
-    work->session_info_     = conn->term_session_;
-    work->work_func_        = TRequestWork_Heartbeat::Func_Begin;
-    work->user_ptr_         = psm_context_;
-
+    TRequestWork_Heartbeat *work = new TRequestWork_Heartbeat(pkg, conn->term_session_, psm_context_);
     psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
 }
 
@@ -78,7 +57,7 @@ void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyReq
             }
             else
             {
-                psm_context_->logger_.Warn("[终端业务申请请求][CAID=%I64d][SID=%I64d] 申请呈现端的会话[SID=%I64d]不存在。",  
+                psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=" SFMT64U "] 申请呈现端的会话[SID=" SFMT64U "]不存在。",  
                                             conn->term_session_->CAId(), conn->term_session_->Id(),
                                             pkg->svc_cross_apply_desc_.show_session_id_);    
 
@@ -88,7 +67,7 @@ void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyReq
         }
         else
         {
-            psm_context_->logger_.Warn("[终端业务申请请求][CAID=%I64d][SID=%I64d] 申请参数不合法。",  
+            psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=" SFMT64U "] 申请参数不合法。",  
                                         conn->term_session_->CAId(), conn->term_session_->Id());    
 
             ret_code = PT_RC_MSG_FORMAT_ERROR;
@@ -107,7 +86,7 @@ void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyReq
     PtSvcApplyResponse svcapply_response(ret_code, 0);
     ByteStream response_pkg = svcapply_response.Serialize();
 
-    psm_context_->logger_.Trace("[终端业务申请请求][CAID=%I64d][SID=%I64d] 处理业务申请请求失败，向终端发送失败应答。长度：%d  内容：\n",  
+    psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=" SFMT64U "] 处理业务申请请求失败，向终端发送失败应答。长度：%d  内容：\n%s",  
                                 conn->term_session_->CAId(), conn->term_session_->Id(),
                                 response_pkg.Size(),
                                 stringtool::to_hex_string((const char*)response_pkg.GetBuffer(),response_pkg.Size()).c_str());    
@@ -122,26 +101,12 @@ void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyReq
 
 void TermRequestProcessSvr::AddStatusQueryWork( TermConnection *conn, PtStatusQueryRequest *pkg )
 {
-    TRequestWork_StatusQuery *work = new TRequestWork_StatusQuery;
-
-    work->pkg_              = pkg;
-    work->run_step_         = TRequestWork_StatusQuery::StatusQuery_Begin;
-    work->session_info_     = conn->term_session_;
-    work->work_func_        = TRequestWork_StatusQuery::Func_Begin;
-    work->user_ptr_         = psm_context_;
-
+    TRequestWork_StatusQuery *work = new TRequestWork_StatusQuery(pkg, conn->term_session_, psm_context_);
     psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
 }
 
 void TermRequestProcessSvr::AddGetSvrGroupWork( TermConnection *conn, PtGetSvcGroupRequest *pkg )
 {
-    TRequestWork_GetSvcGroup *work = new TRequestWork_GetSvcGroup;
-
-    work->pkg_              = pkg;
-    work->run_step_         = TRequestWork_GetSvcGroup::GetSvcGroup_Begin;
-    work->session_info_     = conn->term_session_;
-    work->work_func_        = TRequestWork_GetSvcGroup::Func_Begin;
-    work->user_ptr_         = psm_context_;
-
+    TRequestWork_GetSvcGroup *work = new TRequestWork_GetSvcGroup(pkg, conn->term_session_, psm_context_);
     psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
 }

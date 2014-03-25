@@ -6,12 +6,8 @@
 #if !defined gehua_businesslogic_work_pool_h_
 #define gehua_businesslogic_work_pool_h_
 
-#include <assert.h>
-#include <vector>
 #include <cpplib/logger.h>
 #include <cpplib/workqueue.h>
-
-using ::std::vector;
 
 struct WorkPool 
 {

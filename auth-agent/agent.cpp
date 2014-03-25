@@ -30,6 +30,7 @@ static size_t getline(FCGX_Stream *in, vector<string> *out)
     return ret;
 }
 
+#if 0
 int main() 
 {
      // 初始化日志对象
@@ -90,8 +91,80 @@ int main()
             g_logger.Info("FastCGI Printf return code: %d context: \n\t%s!", writed, rescontent.c_str());
             //FCGX_FFlush(request.out);
             //FCGX_FClose(request.out);
+        } while (false); 
+        FCGX_Finish_r(&request);
+    }
+    //FCGX_Finish_r(&request);
+    return 0;
+}
+
+#endif
+
+#if 0
+int main() 
+{
+     // 初始化日志对象
+    g_logger.SetLimit(10);
+    g_logger.SetModule("auth-agent");
+    g_logger.SetPath("./log/auth-agent");
+    g_logger.SetLogLevel(LOGLEVEL_Trace);
+    g_logger.SetOutputToScreen(true);
+    g_logger.SetOutputToFile(true);
+    g_logger.SetBackgroundRunning(true);
+
+    
+    FCGX_Stream *in = 0;
+    FCGX_Stream *out = 0;
+    FCGX_Stream *err = 0;
+    FCGX_ParamArray envp;
+    int count = 0;  
+
+    g_logger.Info("PSM-HTTP Server Started!");
+  
+    while (FCGX_Accept(&in, &out, &err, &envp) >= 0) {
+
+        //get req header, and context.
+        string q_str;
+        vector<string> content;
+
+        bool keepalive = false;
+        do {
+
+            content.clear();
+            q_str = FCGX_GetParam("QUERY_STRING", envp);
+            getline(in, &content);
+
+            RequestEntry reqety(g_logger, q_str, content);
+            if (!reqety.valid())
+                break;
+
+            string rescontent = reqety.MakeResponse();
+
+            keepalive = reqety.ConnKeepAlive();
+            //request.keepConnection = keepalive; 
+
+            string conn = "";
+            if (!keepalive) 
+                conn = "Connection: close\r\n";
+
+            int writed = FCGX_FPrintF(out, 
+                            "Pragma: no-cache\r\n"			
+                            "Cache-Control: no-cache\r\n"
+                            "Content-Type: text/html\r\n"
+                            "%s"
+                            "Content-Length: %d\r\n"
+                            "\r\n"
+                            "%s",
+                            conn.c_str(),
+                            rescontent.length(),
+                            rescontent.c_str());
+            g_logger.Info("FastCGI Printf return code: %d context: \n\t%s!", writed, rescontent.c_str());
+            //FCGX_FFlush(request.out);
+            //FCGX_FClose(request.out);
         } while (false);  
     }
     //FCGX_Finish_r(&request);
     return 0;
 }
+
+#endif 

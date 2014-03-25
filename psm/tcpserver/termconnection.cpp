@@ -17,6 +17,13 @@ void TermConnection::OnDataReceived()
         uint32_t len       = 0;
 
         LOCK(lock, recv_mt_);
+
+        if ( recv_buffer_.Size() > 0 )
+        {
+            recv_buffer_.SetReadPtr(0);
+            LOG_TRACE("[%s:TCP] 接收到终端数据包：%s, dump:\n%s", IdString().c_str(), GetPeerAddr().c_str(), recv_buffer_.DumpHex(16,true).c_str());
+        }
+
         pkt_count = parsePacket(&msg, &len);
         if (pkt_count < 0) {
             // it is a invalid packet.
@@ -45,7 +52,7 @@ void TermConnection::OnDataReceived()
             }
 
             term_session_ = psm_ctx_->busi_pool_->GenTermSession((PtLoginRequest *)msg, this);
-            if (term_session_ == NULL) {
+            if (!term_session_) {
                 LOG_WARN("[%s:TCP] 终端连接后第一个请求验证失败：%s", 
                          IdString().c_str(), 
                          GetPeerAddr().c_str());
@@ -120,6 +127,9 @@ void TermConnection::OnDataReceived()
             }
 
             break;
+        default:
+            LOG_WARN("[%s:TCP] 接收到未知的请求，忽略. msg_id:%d", IdString().c_str(), msg->msg_id_);           
+            break;
         }
     }
 }
@@ -130,7 +140,7 @@ int TermConnection::parsePacket( PtBase** msg, uint32_t* len )
 
     recv_buffer_.SetReadPtr(0);
     ret = PtBase::CheckCompleteness(recv_buffer_,*len);
-        if (ret < 0) {
+    if (ret < 0) {
         return -1;  //packet parse failed
     }
 

@@ -57,13 +57,12 @@ void HttpRequestWork::SendRequestFunc( Work *work )
 HttpRequestThread::HttpRequestThread( PSMContext *psm_context )
 {
     psm_context_ = psm_context;
-    request_     = ghttp_request_new();
 }
 
 
 HttpRequestThread::~HttpRequestThread()
 {
-    ghttp_request_destroy(request_);
+
 }
 
 void HttpRequestThread::AddHttpRequestWork( SvcApplyWork *work )
@@ -80,8 +79,10 @@ void HttpRequestThread::SendHttpRequest( SvcApplyWork *work )
     ghttp_status status;
     work->http_request_info_.request_result_ = HTTPAysnRequestInfo::ConnectFailed;
 
+    request_  = ghttp_request_new();
     do 
     {
+
         if ( ghttp_set_uri(request_, (char*)(work->http_request_info_.request_url_.GetBuffer())) < 0 )
         {
             break;
@@ -116,6 +117,9 @@ void HttpRequestThread::SendHttpRequest( SvcApplyWork *work )
         work->http_request_info_.request_result_ = HTTPAysnRequestInfo::OK;
     } while ( 0 );
 
+    ghttp_request_destroy(request_);
+
     // add responed process work to process thread.
-    psm_context_->busi_pool_->AddWork(work, work->self_session_info_->CAId());
+    shared_ptr<TermSession> ts(work->self_session_info_.lock());
+    psm_context_->busi_pool_->AddWork(work, ts->CAId());
 }

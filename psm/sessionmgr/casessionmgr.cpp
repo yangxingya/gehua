@@ -36,7 +36,7 @@ void CASessionMgr::Attach(CASession *cs)
 {
     ca_session_map_[cs->Id()] = cs;
 
-    map<uint64_t, TermSession*>::iterator 
+    map<uint64_t, weak_ptr<TermSession> >::iterator 
         it = cs->terminal_session_map_.begin();
 
     for (; it != cs->terminal_session_map_.end(); ++it) {
@@ -53,7 +53,7 @@ CASession* CASessionMgr::Detach(caid_t caid)
 
         cs = it->second;
 
-        map<uint64_t, TermSession*>::iterator 
+        map<uint64_t, weak_ptr<TermSession> >::iterator 
             tit = it->second->terminal_session_map_.begin();
 
         map<uint64_t, CASession*>::iterator cit;

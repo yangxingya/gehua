@@ -6,32 +6,10 @@
 #if !defined gehua_common_widget_h_
 #define gehua_common_widget_h_
 
-#ifdef _WIN32
-# include <winsock2.h>
-#else // _WIN32
-# ifdef __linux__
+#include <cpplib/cpplibbase.h>
+#include <cpplib/logger.h>
 
-# endif // __linux__
-#endif // !_WIN32
-
-#include <string>
-#include <vector>
-#include <map>
-
-#ifdef _MSC_VER
-# include "../../include/cpplib/cpplibbase.h"  //for type define uint<xx>_t;
-# define U64T  "%I64u"  //for unsigned __int64 printf format.
-# define S64T  "%I64d"  //for __int64 printf format.
-# define ATTR_PACKED 
- typedef unsigned __int64 caid_t;
-#else // _MSC_VER
-# ifdef __GUNC__
-#  define U64T "%llu"
-#  define S64T "%lld"
-#  define ATTR_PACKED __attribute__((packed))
-   typedef uint64_t caid_t;
-# endif // __GUNC__
-#endif // !_MSC_VER
+typedef uint64_t caid_t;
 
 enum ByteOrder {
     OrderLittleEndian = 1,
@@ -76,10 +54,6 @@ inline uint8_t* change_order(uint8_t* t, size_t sz)
 
     return t;
 }
-
-using ::std::string;
-using ::std::vector;
-using ::std::map;
 
 inline string change_order(string const& t)
 {
@@ -327,7 +301,5 @@ inline size_t to_array(string const& arr, vector<uint8_t> *out)
     out->resize(arr.length());
     return to_array(arr, &(*out)[0]);
 }
-
-
 
 #endif //!gehua_common_widget_h_

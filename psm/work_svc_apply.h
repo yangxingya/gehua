@@ -1,11 +1,11 @@
 #ifndef WORK_SVC_APPLY_H_
 #define WORK_SVC_APPLY_H_
 
-#include "cpplib/workqueue.h"
-#include "protocol/protocol_v2_pb_message.h"
-#include "protocol/protocol_v2_pt_message.h"
+#include <cpplib/timetool.h>
+#include <cpplib/workqueue.h>
+#include <protocol/protocol_v2_pb_message.h>
+#include <protocol/protocol_v2_pt_message.h>
 #include "businesslogic/businesspool.h"
-#include "cpplib/timetool.h"
 #include "tcpserver/busiconnection.h"
 #include "tcpserver/termconnection.h"
 
@@ -61,8 +61,8 @@ struct SvcApplyWork : public Work
 
     SvcApplyType                apply_type_;
     HTTPAysnRequestInfo         http_request_info_;
-    TermSession                 *cross_session_info_;
-    TermSession                 *self_session_info_;
+    weak_ptr<TermSession>       cross_session_info_;
+    weak_ptr<TermSession>       self_session_info_;
     string                      work_name_;
     char                        log_header_[300]; 
     
@@ -78,8 +78,8 @@ struct SvcApplyWork : public Work
  */
 struct TermSvcApplyWork : public SvcApplyWork
 {
-    TermSvcApplyWork(AioConnection *conn, PtSvcApplyRequest *pkg, TermSession *self_session_info);
-    TermSvcApplyWork(AioConnection *conn, PtSvcApplyRequest *pkg, TermSession *self_session_info, TermSession *cross_session_info);
+    TermSvcApplyWork(AioConnection *conn, PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info);
+    TermSvcApplyWork(AioConnection *conn, PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info);
     virtual ~TermSvcApplyWork();
 
     int SendResponed(ByteStream &response_buf);
@@ -99,9 +99,9 @@ public:
  */
 struct SMSvcApplyWork : public SvcApplyWork
 {
-    SMSvcApplyWork(AioConnection *conn, PbSvcApplyRequest *pkg, TermSession *self_session_info);
+    SMSvcApplyWork(AioConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info);
 
-    SMSvcApplyWork(AioConnection *conn, PbSvcApplyRequest *pkg, TermSession *self_session_info, TermSession *cross_session_info);
+    SMSvcApplyWork(AioConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info);
     virtual ~SMSvcApplyWork();
 
     int SendResponed(unsigned int ret_code);

@@ -21,15 +21,11 @@
 #include "../bs-comm-def.h"
 #include "../../common/auth/desc-common.h"
 
-using ::std::stack;
-using ::std::string;
-
 struct UserInfo;
 struct TermConnection;
 struct PtLoginRequest;
 struct CASession;
 struct BusinessStatusInfo;
-//struct PB_SvcURLDescriptor;
 
 struct TermSession
 {
@@ -37,33 +33,32 @@ public:
     TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tconn);
     bool valid() const { return valid_; }
 public:
-    CASession       *ca_session;
-    Mutex            term_conn_mtx;
-    TermConnection  *term_conn;
 
-    BusinessType            curr_busi_type;
-    BusinessType            last_busi_type;
+    CASession       *ca_session_;
+    TermConnection  *term_conn_;
 
-    stack<string>          back_url_stack;
-    PB_SvcURLDescriptor     curr_svc_url_desc;
+    BusinessType            curr_busi_type_;
+    BusinessType            last_busi_type_;
 
-    ServiceGroup    service_grp;
-    UserInfo        user_info;
+    string                  last_local_svc_url_;
+    PB_SvcURLDescriptor     curr_svc_url_desc_;
 
-    PT_OdcLibDescriptor       odclib_desc;        
-    PT_UserInfoDescriptor     user_info_desc;     
-    PT_UserCertDataDescriptor cert_data_desc;     
-    PT_TerminalInfoDescriptor terminal_info_desc; 
+    ServiceGroup    service_grp_;
+    UserInfo        user_info_;
 
-    PT_SessionInfoDescriptor  session_info_desc;    //TODO:需要根据配置文件设置
+    PT_OdcLibDescriptor       odclib_desc_;        
+    PT_UserInfoDescriptor     user_info_desc_;     
+    PT_UserCertDataDescriptor cert_data_desc_;     
+    PT_TerminalInfoDescriptor terminal_info_desc_; 
+
+    PT_SessionInfoDescriptor  session_info_desc_;    //TODO:需要根据配置文件设置
 
     uint64_t Id() const { return id_; }
     caid_t CAId() const { return caid_;}
-    void Id(uint64_t id) { id_ = id; terminal_info_desc.session_id_ = id_; }
+    void Id(uint64_t id) { id_ = id; terminal_info_desc_.session_id_ = id_; }
 
-    void    UpdateSessionInfo(PB_SvcURLDescriptor &url_desc);
-    string  GetBackURL(string &curr_apply_url);
-    void    UpdateBackURL(PB_SvcURLDescriptor &url_desc);
+    void UpdateSessionInfo(PB_SvcURLDescriptor &url_desc);
+    bool IsValidTermInfoDesc(PT_TerminalInfoDescriptor term_info_desc);
 
 private:
     uint64_t    id_;

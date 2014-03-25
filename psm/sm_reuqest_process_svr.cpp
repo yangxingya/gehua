@@ -1,5 +1,5 @@
+#include <cpplib/stringtool.h>
 #include "sm_reuqest_process_svr.h"
-#include "cpplib/stringtool.h"
 #include "psmcontext.h"
 #include "sessionmgr/termsession.h"
 #include "sessionmgr/casession.h"
@@ -16,7 +16,7 @@ SMRequestProcessSvr::~SMRequestProcessSvr()
 
 void SMRequestProcessSvr::AddTermSyncWork( BusiConnection *conn, PbTermSyncRequest *pkg )
 {
-    psm_context_->logger_.Trace("[SM终端状态同步请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d  同步的终端个数：%d", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_ , pkg->term_status_desc_list_.size());
+    psm_context_->logger_.Trace("[SM终端状态同步请求] 收到请求，开始处理。 业务ID：%s   流水号：" SFMT64U "  同步的终端个数：%d", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_ , pkg->term_status_desc_list_.size());
 
     UpdateTermStatus(pkg->term_status_desc_list_);
 
@@ -45,9 +45,11 @@ void SMRequestProcessSvr::AddTermSyncWork( BusiConnection *conn, PbTermSyncReque
 
 void SMRequestProcessSvr::AddTermReportWork( BusiConnection *conn, PbTermReportRequest *pkg )
 {
-    psm_context_->logger_.Trace("[SM终端状态汇报请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d   汇报的终端个数：%d", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_ , pkg->term_status_desc_list_.size());
+    psm_context_->logger_.Trace("[SM终端状态汇报请求] 收到请求，开始处理。 业务ID：%s   流水号：" SFMT64U "   汇报的终端个数：%d", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_ , pkg->term_status_desc_list_.size());
 
     int ret = UpdateTermStatus(pkg->term_status_desc_list_);
+    if ( ret ) {//??????
+    }
 
     //send responed.
     PbTermReportResponse termreport_response;
@@ -74,9 +76,11 @@ void SMRequestProcessSvr::AddTermReportWork( BusiConnection *conn, PbTermReportR
 
 void SMRequestProcessSvr::AddSvcPChangeWork( BusiConnection *conn, PbSvcPChangeRequest *pkg )
 {
-    psm_context_->logger_.Trace("[SM终端参数变更请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_);
+    psm_context_->logger_.Trace("[SM终端参数变更请求] 收到请求，开始处理。 业务ID：%s   流水号：" SFMT64U "", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_);
 
     int ret = UpdateTermParam(pkg);
+    if ( ret ) {//??????
+    }
 
     //send responed.
     PbSvcPChangeResponse svcpchange_response;
@@ -103,21 +107,22 @@ void SMRequestProcessSvr::AddSvcPChangeWork( BusiConnection *conn, PbSvcPChangeR
 
 void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyRequest *pkg )
 {
-    psm_context_->logger_.Trace("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_);
+    psm_context_->logger_.Trace("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：" SFMT64U "", pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_);
 
     unsigned int ret_code = PS_RC_MSG_FORMAT_ERROR;
     do 
     {
         SMSvcApplyWork *svcapply_work = NULL;
 
-        TermSession *self_session   = NULL;
-        TermSession *cross_session  = NULL;
+        weak_ptr<TermSession> self_session;
+        weak_ptr<TermSession> cross_session;
         if ( pkg->svc_self_apply_desc_.valid_ )
         {
             self_session = psm_context_->busi_pool_->FindTermSessionById(pkg->svc_self_apply_desc_.session_id_);
-            if ( self_session == NULL )
+            shared_ptr<TermSession> self_ts(self_session.lock());
+            if ( self_ts == NULL )
             {
-                psm_context_->logger_.Warn("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d. 申请业务的会话[SID=%I64d]不存在。", 
+                psm_context_->logger_.Warn("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：" SFMT64U ". 申请业务的会话[SID=" SFMT64U "]不存在。", 
                                             pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_,
                                             pkg->svc_self_apply_desc_.session_id_);
                 ret_code = PS_RC_MSG_FORMAT_ERROR;
@@ -130,9 +135,11 @@ void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyReque
         {
             self_session   = psm_context_->busi_pool_->FindTermSessionById(pkg->svc_cross_apply_desc_.init_session_id_);
             cross_session  = psm_context_->busi_pool_->FindTermSessionById(pkg->svc_cross_apply_desc_.show_session_id_);
-            if ( self_session == NULL || cross_session == NULL )
+            shared_ptr<TermSession> self_ts(self_session.lock());
+            shared_ptr<TermSession> cross_ts(cross_session.lock());
+            if ( self_ts == NULL || cross_ts == NULL )
             {
-                psm_context_->logger_.Warn("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：%I64d. 申请业务的会话[Self_SID=%I64d][Cross_SID=%I64d]不存在。", 
+                psm_context_->logger_.Warn("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：" SFMT64U ". 申请业务的会话[Self_SID=" SFMT64U "][Cross_SID=" SFMT64U "]不存在。", 
                     pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_,
                     pkg->svc_self_apply_desc_.session_id_,
                     pkg->svc_cross_apply_desc_.show_session_id_);
@@ -152,7 +159,13 @@ void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyReque
         svcapply_work->user_ptr_    = psm_context_;
         svcapply_work->work_func_   = SMSvcApplyWork::Func_Begin;
 
-        psm_context_->busi_pool_->AddWork(svcapply_work, self_session->CAId());
+        shared_ptr<TermSession> self_ts(self_session.lock());
+        if (self_ts) {
+            psm_context_->busi_pool_->AddWork(svcapply_work, self_ts->CAId());
+        } else {
+            //todo logggggg.....
+            // return ??????
+        }
         return;
     } while (0);
 
@@ -168,7 +181,7 @@ void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyReque
 
     ByteStream response_pkg = svcapply_response.Serialize();
 
-    psm_context_->logger_.Trace("[SM终端业务申请请求] 处理失败，向SM发送失败应答。 长度：%d  内容：\n%s", 
+    psm_context_->logger_.Warn("[SM终端业务申请请求] 处理失败，向SM发送失败应答。 长度：%d  内容：\n%s", 
                                 response_pkg.Size(),
                                 stringtool::to_hex_string((const char*)response_pkg.GetBuffer(),response_pkg.Size()).c_str());
 
@@ -188,16 +201,17 @@ int SMRequestProcessSvr::UpdateTermStatus( list<PB_TerminalStatusDescriptor> &te
         vector<uint64_t>::iterator iter2 = iter->session_ids_.begin();
         for ( ; iter2 != iter->session_ids_.end(); iter2++ )
         {
-            TermSession *term_session = psm_context_->busi_pool_->FindTermSessionById(*iter2);
+            weak_ptr<TermSession> wp_term_session = psm_context_->busi_pool_->FindTermSessionById(*iter2);
+            shared_ptr<TermSession> term_session(wp_term_session.lock());
             if ( term_session != NULL )
             {
                 // if status changed, update business status.
-                if ( term_session->terminal_info_desc.business_status_ != iter->business_status_ )
+                if ( term_session->terminal_info_desc_.business_status_ != iter->business_status_ )
                 {
-                    psm_context_->logger_.Trace("[状态变更通知][CAID=%I64d][SID=%I64d] 会话信息发送变化，向终端发送状态变更通知。", term_session->CAId(), term_session->Id());
+                    psm_context_->logger_.Trace("[状态变更通知][CAID=" SFMT64U "][SID=" SFMT64U "] 会话信息发送变化，向终端发送状态变更通知。", term_session->CAId(), term_session->Id());
 
-                    term_session->terminal_info_desc.business_status_ = iter->business_status_;
-                    psm_context_->term_basic_func_svr_->NotifyAllTerminalStatusPChanged(term_session->ca_session);
+                    term_session->terminal_info_desc_.business_status_ = iter->business_status_;
+                    psm_context_->term_basic_func_svr_->NotifyAllTerminalStatusPChanged(term_session->ca_session_, 0);
                 }
             }
         }
@@ -208,24 +222,26 @@ int SMRequestProcessSvr::UpdateTermStatus( list<PB_TerminalStatusDescriptor> &te
 
 int SMRequestProcessSvr::UpdateTermParam( PbSvcPChangeRequest *pkg )
 {
-    TermSession *term_session = psm_context_->busi_pool_->FindTermSessionById(pkg->key_map_indicate_desc_.session_id_);
+    weak_ptr<TermSession> wp_term_session = psm_context_->busi_pool_->FindTermSessionById(pkg->key_map_indicate_desc_.session_id_);
+    shared_ptr<TermSession> term_session(wp_term_session.lock());
     if ( term_session == NULL )
     {
         return -1;
     }
 
-    CASession *ca_session = term_session->ca_session;
-    map<uint64_t, TermSession*>::iterator iter = ca_session->terminal_session_map_.begin();
+    CASession *ca_session = term_session->ca_session_;
+    map<uint64_t, weak_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
     for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
     {
         //只给在PhoneControl业务中的终端发送业务切换通知
-        if ( iter->second->curr_busi_type == BSPhoneControl )
+        shared_ptr<TermSession> it_ts(iter->second.lock());
+        if ( it_ts != NULL && it_ts->curr_busi_type_ == BSPhoneControl )
         {
-            psm_context_->logger_.Trace("[业务切换通知][CAID=%I64d][SID=%I64d] SM返回业务切换指示，向终端发送业务切换通知。", iter->second->CAId(), iter->second->Id());
+            psm_context_->logger_.Trace("[业务切换通知][CAID=" SFMT64U "][SID=" SFMT64U "] SM返回业务切换指示，向终端发送业务切换通知。", it_ts->CAId(), it_ts->Id());
 
             PtSvcSwitchRequest *svcswitch_pkg = new PtSvcSwitchRequest;
             svcswitch_pkg->keymap_indicate_desc_ = pkg->key_map_indicate_desc_;
-            psm_context_->term_basic_func_svr_->AddSvcSwitchNotifyWork(iter->second->term_conn, svcswitch_pkg);
+            psm_context_->term_basic_func_svr_->AddSvcSwitchNotifyWork(it_ts->term_conn_, svcswitch_pkg);
         }
     }
 

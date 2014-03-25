@@ -126,13 +126,18 @@ public:
         bs.Add(key, sizeof(key));
         bs.PutUint32(m);
 
+        // pad for length to 0x80 [keyid used 4 bytes];
+        uint8_t pad[0x80 - sizeof(counter) - sizeof(key) - sizeof(m)];
+        memset(pad, 0, sizeof(pad));
+        bs.Add(pad, sizeof(pad));
+
         return bs;
     }
 
     /*
     *@brief: generate cert by user id
     */
-    UserCert* GenerateCert(UserInfo const& userinfo, string const& ui_str)
+    UserCert* GenerateCert(Logger &logger, UserInfo const& userinfo, string const& ui_str)
     {
         map<UserInfo, UserCert*>::iterator it;
         it = cert_map_.find(userinfo);
@@ -141,7 +146,7 @@ public:
 
         uint32_t operid   = 0;
         string   opername = "gehua";
-        UserCert *cert = new UserCert(CertMgr::GenerateCertId(userinfo), ui_str, operid, opername);
+        UserCert *cert = new UserCert(logger, CertMgr::GenerateCertId(userinfo), ui_str, operid, opername);
         cert_map_[userinfo] = cert;
 
         return cert;
