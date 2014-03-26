@@ -72,6 +72,43 @@ int SMSvcApplyWork::SendResponed( unsigned int ret_code )
     return -1;
 }
 
+void SMSvcApplyWork::AddNotifySvcSwitchWork()
+{
+    PSMContext *psm_context = (PSMContext*)user_ptr_;
+
+    psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头:%s ,该协议头为SM不支持的本地协议头，创建通知终端业务切换工作任务...", log_header_);
+    if ( apply_type_ == TermSvcApplyWork::SelfSvcApply )
+    {
+        // 通知发起端业务切换
+        PtSvcSwitchRequest *svcswitch_request = new PtSvcSwitchRequest;
+        svcswitch_request->svc_url_desc_.url_       = pkg_->svc_self_apply_desc_.apply_url_;
+        svcswitch_request->svc_url_desc_.back_url_  = pkg_->svc_self_apply_desc_.back_url_;
+        svcswitch_request->svc_url_desc_.valid_     = true;
+
+        psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(self_session_info_, svcswitch_request);
+    }
+    else
+    {
+        // 通知发起端业务切换
+        PtSvcSwitchRequest *svcswitch_request_init = new PtSvcSwitchRequest;
+        svcswitch_request_init->svc_url_desc_.url_       = pkg_->svc_cross_apply_desc_.init_apply_url_;
+        svcswitch_request_init->svc_url_desc_.back_url_  = pkg_->svc_cross_apply_desc_.init_back_url_;
+        svcswitch_request_init->svc_url_desc_.valid_     = true;
+
+        psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(self_session_info_, svcswitch_request_init);
+
+        // 通知呈现端业务切换
+        PtSvcSwitchRequest *svcswitch_request_show = new PtSvcSwitchRequest;
+        svcswitch_request_show->svc_url_desc_.url_       = pkg_->svc_cross_apply_desc_.show_apply_url_;
+        svcswitch_request_show->svc_url_desc_.back_url_  = pkg_->svc_cross_apply_desc_.show_back_url_;
+        svcswitch_request_show->svc_url_desc_.valid_     = true;
+
+        psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(cross_session_info_, svcswitch_request_show);                
+    }
+
+    psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头:%s ,该协议头为SM不支持的本地协议头，创建通知终端业务切换工作任务完成。", log_header_);
+}
+
 void SMSvcApplyWork::Func_Begin( Work *work )
 {
     SMSvcApplyWork *svcapply_work  = (SMSvcApplyWork*)work;
@@ -163,13 +200,15 @@ void SMSvcApplyWork::Func_Begin( Work *work )
             apply_desc_buf  = svcapply_work->pkg_->svc_cross_apply_desc_.SerializeFull();
         }
 
-        psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头...", svcapply_work->log_header_);
-
         string service_name = svcapply_work->GetServiceName(apply_url);
+        psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头为：%s.", svcapply_work->log_header_, service_name.c_str());
 
-        if ( psm_context->business_apply_svr_->IsPHONEControlSvc(service_name.c_str()) )
-        {
-            psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头:%s ,申请的是手机外设业务，则直接返回成功应答.", svcapply_work->log_header_, service_name.c_str());
+        if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+        { 
+            // 当收到的业务申请请求url的协议头为非SM支持的协议头时，需要将该业务申请直接转发给对应终端，通知终端业务切换；            
+            svcapply_work->AddNotifySvcSwitchWork();
+
+            psm_context->logger_.Warn("%s 添加终端业务切换通知工作任务成功，项sm发送成功应答。", svcapply_work->log_header_);
 
             svcapply_work->SendResponed(RC_SUCCESS);
             TermSvcApplyWork::Func_End(work);
@@ -280,7 +319,7 @@ void SMSvcApplyWork::Func_Inited( Work *work )
                         need_send_keymap_indicate                = false;
                     }
 
-                    psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session->term_conn_, svcswitch_request);
+                    psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session, svcswitch_request);
                 }
             }
             else
@@ -301,7 +340,7 @@ void SMSvcApplyWork::Func_Inited( Work *work )
                 PtSvcSwitchRequest *svcswitch_request = new PtSvcSwitchRequest;
                 svcswitch_request->keymap_indicate_desc_ = term_keymaping_indicate_desc;
 
-                psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session->term_conn_, svcswitch_request);
+                psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session, svcswitch_request);
             }
         }
     } while ( 0 );

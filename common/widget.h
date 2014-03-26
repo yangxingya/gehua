@@ -26,7 +26,7 @@ inline ByteOrder test_byte_order()
     return OrderBigEndian;
 }
 
-static ByteOrder g_byteorder = test_byte_order();
+//static ByteOrder g_byteorder = test_byte_order();
 
 template<typename T>
 inline T change_order(T const& t)
@@ -162,6 +162,7 @@ inline uint64_t to_uint64(string const& str, bool *cast_ok)
 // will get local ip address, if get failure return "0.0.0.0";
 inline string ip_string(string const& ip_and_port) 
 {
+    /*
     // listen_addr_ is likely "192.168.15.3:13333" format
     string::size_type pos = ip_and_port.find(":");
     string ip = ip_and_port.substr(0, pos);
@@ -183,7 +184,8 @@ inline string ip_string(string const& ip_and_port)
             ip = inet_ntoa(addr);
         }
     }
-    return ip;
+    return ip;*/
+    return "127.0.0.1";//??????
 }
 
 // convert ip likely "10.12.11.13" to struct in_addr format <ulong> type.
@@ -203,7 +205,7 @@ inline uint32_t ip_cast(string const& ipstr)
             uint8_t t4;
         } bs;
         uint32_t value;
-    } ATTR_PACKED ;
+    };
     #pragma pack()
 
 

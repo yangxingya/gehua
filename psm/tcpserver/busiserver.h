@@ -6,7 +6,6 @@
 #if !defined gehua_tcpserver_business_server_h_
 #define gehua_tcpserver_business_server_h_
 
-#include "../timeouttimer.h"
 #include "../../common/widget.h"
 #include "busiconnection.h"
 
@@ -57,8 +56,6 @@ private:
     * ip map all connection on the same ip 
     */
     map<uint32_t, list<BusiConnection*> > ip_conn_list_map_;
-
-    TimeOutTimer conn_timeout_timer_;
 private:
     BusiServer(BusiServer const&);
     BusiServer& operator=(BusiServer const&);

@@ -25,6 +25,7 @@
 #define  PT_RC_TERM_TYPE_ERROR         0x81010026	//终端类型不支持
 #define  PT_RC_TERM_APPLY_SVC_ERROR    0x81010027	//终端申请的业务不支持
 #define  PT_RC_TERM_APPLY_SVC_INVALID  0x81010028	//终端申请的业务目标已失效
+#define  PT_RC_TERM_SESSION_NOT_EXIST  0x81010029   //终端会话不存在
 
 #define  ST_RC_TERM_APPLY_SVC_ERROR    0x81020021	//终端申请的业务不支持
 #define  ST_RC_TERM_APPLY_SVC_INVALID  0x81020022	//终端申请的业务目标已失效

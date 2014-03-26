@@ -230,18 +230,17 @@ int SMRequestProcessSvr::UpdateTermParam( PbSvcPChangeRequest *pkg )
     }
 
     CASession *ca_session = term_session->ca_session_;
-    map<uint64_t, weak_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
+    map<uint64_t, shared_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
     for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
     {
         //只给在PhoneControl业务中的终端发送业务切换通知
-        shared_ptr<TermSession> it_ts(iter->second.lock());
-        if ( it_ts != NULL && it_ts->curr_busi_type_ == BSPhoneControl )
+        if ( iter->second->curr_busi_type_ == BSPhoneControl )
         {
-            psm_context_->logger_.Trace("[业务切换通知][CAID=" SFMT64U "][SID=" SFMT64U "] SM返回业务切换指示，向终端发送业务切换通知。", it_ts->CAId(), it_ts->Id());
+            psm_context_->logger_.Trace("[业务切换通知][CAID=" SFMT64U "][SID=" SFMT64U "] SM返回业务切换指示，向终端发送业务切换通知。", iter->second->CAId(), iter->second->Id());
 
             PtSvcSwitchRequest *svcswitch_pkg = new PtSvcSwitchRequest;
             svcswitch_pkg->keymap_indicate_desc_ = pkg->key_map_indicate_desc_;
-            psm_context_->term_basic_func_svr_->AddSvcSwitchNotifyWork(it_ts->term_conn_, svcswitch_pkg);
+            psm_context_->term_basic_func_svr_->AddSvcSwitchNotifyWork(iter->second, svcswitch_pkg);
         }
     }
 

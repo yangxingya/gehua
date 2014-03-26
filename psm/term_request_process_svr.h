@@ -18,32 +18,32 @@ public:
     /**
      * @brief 添加一个终端登录请求工作任务
      */
-    void AddLoginRequestWork(TermConnection *conn, PtLoginRequest *pkg);
+    void AddLoginRequestWork(weak_ptr<TermSession> ts, PtLoginRequest *pkg);
 
     /**
      * @brief 添加一个终端退出请求工作任务
      */
-    void AddLogoutRequestWork(TermConnection *conn, PtLogoutRequest *pkg);
+    void AddLogoutRequestWork(weak_ptr<TermSession> ts, PtLogoutRequest *pkg);
 
     /**
      * @brief 添加一个终端心跳请求工作任务
      */
-    void AddHeartbeatWork(TermConnection *conn, PtHeartbeatRequest *pkg);
+    void AddHeartbeatWork(weak_ptr<TermSession> ts, PtHeartbeatRequest *pkg);
     
     /**
      * @brief 添加一个终端业务申请请求工作任务
      */
-    void AddSvcApplyWork(TermConnection *conn, PtSvcApplyRequest *pkg);
+    void AddSvcApplyWork(weak_ptr<TermSession> ts, PtSvcApplyRequest *pkg);
     
     /**
      * @brief 添加一个业务状态查询请求工作任务
      */
-    void AddStatusQueryWork(TermConnection *conn, PtStatusQueryRequest *pkg);
+    void AddStatusQueryWork(weak_ptr<TermSession> ts, PtStatusQueryRequest *pkg);
     
     /**
      * @brief 添加一个获取服务分组申请请求工作任务
      */
-    void AddGetSvrGroupWork(TermConnection *conn, PtGetSvcGroupRequest *pkg);
+    void AddGetSvrGroupWork(weak_ptr<TermSession> ts, PtGetSvcGroupRequest *pkg);
 
 protected:
 

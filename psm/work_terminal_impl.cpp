@@ -151,7 +151,16 @@ void TRequestWork_Logout::Func_Begin( Work *work )
     if ( !term_conn->Write(responed_pkg.GetBuffer(), responed_pkg.Size()) )
     {
         // TODO:暂时默认发送成功
-    }    
+    }
+
+    //关闭连接，删除会话。
+    shared_ptr<TermSession> sp_ts(term_conn->term_session_.lock());
+    if (sp_ts) {
+        psm_context->busi_pool_->DelTermSession(sp_ts);
+    }
+    term_conn->SetDirty();
+    //todo:: delte ???
+    //delete term_conn;
 
     TRequestWork_Logout::Func_End(work);
 }
@@ -250,12 +259,10 @@ void TRequestWork_StatusQuery::Func_Begin( Work *work )
     CASession *ca_session = session_info->ca_session_;
 
     PtStatusQueryResponse notifyquery_response;
-    map<uint64_t, weak_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
+    map<uint64_t, shared_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
     for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
     {
-        shared_ptr<TermSession> sp_session_info(iter->second.lock());
-        if (sp_session_info)
-            notifyquery_response.Add(sp_session_info->terminal_info_desc_);
+        notifyquery_response.Add(iter->second->terminal_info_desc_);
     }
     if ( statusquery_work->pkg_->test_data_desc_.valid_ )
     {

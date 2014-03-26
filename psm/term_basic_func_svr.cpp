@@ -16,71 +16,71 @@ TermBasicFuncSvr::~TermBasicFuncSvr()
 }
 
 
-void TermBasicFuncSvr::AddKeyTransmitWork( TermConnection *conn, PtKeyMappingRequest *pkg )
+void TermBasicFuncSvr::AddKeyTransmitWork( weak_ptr<TermSession> ts, PtKeyMappingRequest *pkg )
 {
-    TRequestWork_KeyMapping *work = new TRequestWork_KeyMapping;
-
-    shared_ptr<TermSession> ts(conn->term_session_.lock());
-    if (!ts) {
-        //todo:: logggg....
+    shared_ptr<TermSession> sp_ts(ts.lock());
+    if (!sp_ts) {
+        psm_context_->logger_.Warn("[键值映射请求]******终端会话不存在******");
         return;
     }
+
+    TRequestWork_KeyMapping *work = new TRequestWork_KeyMapping;
 
     work->pkg_              = pkg;
     work->run_step_         = TRequestWork_KeyMapping::KeyMapping_Begin;
-    work->session_info_     = conn->term_session_;
+    work->session_info_     = sp_ts;
     work->work_func_        = TRequestWork_KeyMapping::Func_Begin;
     work->user_ptr_         = psm_context_;
 
-    psm_context_->busi_pool_->AddWork(work, ts->CAId());
+    psm_context_->busi_pool_->AddWork(work, sp_ts->CAId());
 }
 
-void TermBasicFuncSvr::AddSvcSwitchNotifyWork( TermConnection *conn, PtSvcSwitchRequest *pkg )
+void TermBasicFuncSvr::AddSvcSwitchNotifyWork( weak_ptr<TermSession> ts, PtSvcSwitchRequest *pkg )
 {
-    TNotifyWork_SvcSwitch *work = new TNotifyWork_SvcSwitch;
-
-    shared_ptr<TermSession> ts(conn->term_session_.lock());
-    if (!ts) {
-        //todo:: logggg....
+    shared_ptr<TermSession> sp_ts(ts.lock());
+    if (!sp_ts) {
+        psm_context_->logger_.Warn("[业务切换通知]******终端会话不存在******");
         return;
     }
 
+    TNotifyWork_SvcSwitch *work = new TNotifyWork_SvcSwitch;
+
     work->pkg_              = pkg;
     work->run_step_         = TNotifyWork_SvcSwitch::SvcSwitch_Begin;
-    work->session_info_     = conn->term_session_;
+    work->session_info_     = sp_ts;
     work->work_func_        = TNotifyWork_SvcSwitch::Func_Begin;
     work->user_ptr_         = psm_context_;
 
-    psm_context_->busi_pool_->AddWork(work, ts->CAId());
+    psm_context_->busi_pool_->AddWork(work, sp_ts->CAId());
 }
 
-void TermBasicFuncSvr::AddSvcSwitchNotifyWork( TermConnection *conn, PtSvcSwitchResponse *pkg )
+void TermBasicFuncSvr::AddSvcSwitchNotifyWork( weak_ptr<TermSession> ts, PtSvcSwitchResponse *pkg )
 {
     //TODO: 暂时不关注应答
     delete pkg;
     return;
 }
 
-void TermBasicFuncSvr::AddStatusPChangeNotifyWork( TermConnection *conn, PtStatusNotifyRequest *pkg )
+void TermBasicFuncSvr::AddStatusPChangeNotifyWork( weak_ptr<TermSession> ts, PtStatusNotifyRequest *pkg )
 {
-    TNotifyWork_StatusNotify *work = new TNotifyWork_StatusNotify;
-
-    shared_ptr<TermSession> ts(conn->term_session_.lock());
-    if (!ts) {
-        //todo:: logggg....
+    shared_ptr<TermSession> sp_ts(ts.lock());
+    if (!sp_ts) {
+        psm_context_->logger_.Warn("[状态参数变化通知]******终端会话不存在******");
         return;
     }
 
+    TNotifyWork_StatusNotify *work = new TNotifyWork_StatusNotify;
+
     work->pkg_              = pkg;
     work->run_step_         = TNotifyWork_StatusNotify::StatusNotify_Begin;
-    work->session_info_     = conn->term_session_;
+    work->session_info_     = sp_ts;
     work->work_func_        = TNotifyWork_StatusNotify::Func_Begin;
     work->user_ptr_         = psm_context_;
 
-    psm_context_->busi_pool_->AddWork(work, ts->CAId());
+    psm_context_->busi_pool_->AddWork(work, sp_ts->CAId());
 }
 
-void TermBasicFuncSvr::AddStatusPChangeNotifyWork( TermConnection *conn, PtStatusNotifyResponse *pkg )
+void TermBasicFuncSvr::AddStatusPChangeNotifyWork( weak_ptr<TermSession> ts, PtStatusNotifyResponse *pkg )
 {
     //TODO: 暂时不关注应答
     delete pkg;
@@ -90,20 +90,16 @@ void TermBasicFuncSvr::AddStatusPChangeNotifyWork( TermConnection *conn, PtStatu
 void TermBasicFuncSvr::NotifyAllTerminalStatusPChanged( CASession *ca_session, uint64_t ignore_session_id )
 {
     PtStatusNotifyRequest notify_request;
-    map<uint64_t, weak_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
+    map<uint64_t, shared_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
     for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
     {
-        shared_ptr<TermSession> it_ts(iter->second.lock());
-        if (it_ts)
-            notify_request.terminal_list_desc_.push_back(it_ts->terminal_info_desc_);
+        notify_request.terminal_list_desc_.push_back(iter->second->terminal_info_desc_);
     }
 
     // add notify work.
     for ( iter = ca_session->terminal_session_map_.begin(); iter != ca_session->terminal_session_map_.end(); iter++ )
     {
-        shared_ptr<TermSession> it_ts(iter->second.lock());
-        if (!it_ts) continue;
-        if ( ignore_session_id == it_ts->Id() )
+        if ( ignore_session_id == iter->second->Id() )
         {
             continue;
         }
@@ -111,7 +107,7 @@ void TermBasicFuncSvr::NotifyAllTerminalStatusPChanged( CASession *ca_session, u
         PtStatusNotifyRequest *tmp = new PtStatusNotifyRequest;
         tmp->terminal_list_desc_ = notify_request.terminal_list_desc_;
 
-        AddStatusPChangeNotifyWork(it_ts->term_conn_, tmp);
+        AddStatusPChangeNotifyWork(iter->second, tmp);
     }
 }
 
@@ -124,20 +120,18 @@ void TRequestWork_KeyMapping::Func_Begin( Work *work )
 
     shared_ptr<TermSession> kmap_ts(keymapping_work->session_info_.lock());
     if (!kmap_ts) {
-        //todo:: logggggg...
+        psm_context->logger_.Warn("[键值映射请求]******终端会话不存在******");
         return;
     }
 
     keymapping_work->run_step_ = TRequestWork_KeyMapping::KepMapping_Transpond;
 
     //get target terminal info.
-    map<uint64_t, weak_ptr<TermSession> >::iterator iter = kmap_ts->ca_session_->terminal_session_map_.find(keymapping_work->pkg_->key_mapping_desc_.dest_session_id_);
+    map<uint64_t, shared_ptr<TermSession> >::iterator iter = kmap_ts->ca_session_->terminal_session_map_.find(keymapping_work->pkg_->key_mapping_desc_.dest_session_id_);
     if ( iter != kmap_ts->ca_session_->terminal_session_map_.end() )
     {
         //transpond to target terminal.
-        shared_ptr<TermSession> it_ts(iter->second.lock());
-        if (!it_ts) continue;
-        
+  
         PtKeyMappingResponse keymapping_response;
         keymapping_response.Add(keymapping_work->pkg_->key_mapping_desc_);
 
@@ -145,12 +139,12 @@ void TRequestWork_KeyMapping::Func_Begin( Work *work )
 
         psm_context->logger_.Trace("[键值映射请求][CAID=" SFMT64U "][SID=" SFMT64U "] 向指定终端[SID=" SFMT64U "]转发键值映射请求。 长度：%d  内容：\n%s", 
                                     kmap_ts->CAId(), kmap_ts->Id(),
-                                    it_ts->Id(),
+                                    iter->second->Id(),
                                     responed_pkg.Size(),
                                     stringtool::to_hex_string((const char*)responed_pkg.GetBuffer(), responed_pkg.Size()).c_str());
 
 
-        it_ts->term_conn_->Write(responed_pkg.GetBuffer(), responed_pkg.Size());
+        iter->second->term_conn_->Write(responed_pkg.GetBuffer(), responed_pkg.Size());
     }
 
     TRequestWork_StatusQuery::Func_End(work);
@@ -176,6 +170,12 @@ void TNotifyWork_SvcSwitch::Func_Begin( Work *work )
     TNotifyWork_SvcSwitch *svcswitch_work  = (TNotifyWork_SvcSwitch*)work;
     PSMContext *psm_context                = (PSMContext*)work->user_ptr_;
 
+    shared_ptr<TermSession> session_info(svcswitch_work->session_info_.lock());
+    if (!session_info) {
+        psm_context->logger_.Warn("[业务切换通知]******终端会话不存在******");
+        return;
+    }
+
     if ( psm_context ) {//??????
     }
 
@@ -188,11 +188,11 @@ void TNotifyWork_SvcSwitch::Func_Begin( Work *work )
     ByteStream bs = svcswitch_work->pkg_->Serialize();
 
     psm_context->logger_.Trace("[业务切换通知][CAID=" SFMT64U "][SID=" SFMT64U "] 向终端发送业务切换通知。 长度：%d  内容：\n%s", 
-                                svcswitch_work->session_info_->CAId(), svcswitch_work->session_info_->Id(),
+                                session_info->CAId(), session_info->Id(),
                                 bs.Size(),
                                 stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
 
-    if ( svcswitch_work->session_info_->term_conn_->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
+    if ( session_info->term_conn_->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
     {
         // add responed process work.
 //         svcswitch_work->work_func_   = TNotifyWork_StatusNotify::Func_ProcessResponed; 
@@ -231,6 +231,12 @@ void TNotifyWork_StatusNotify::Func_Begin( Work *work )
     TNotifyWork_StatusNotify *statusnotify_work  = (TNotifyWork_StatusNotify*)work;
     PSMContext *psm_context                      = (PSMContext*)work->user_ptr_;
 
+    shared_ptr<TermSession> session_info(statusnotify_work->session_info_.lock());
+    if (!session_info) {
+        psm_context->logger_.Warn("[状态变更通知]******终端会话不存在******");
+        return;
+    }
+
     if ( psm_context ) {//??????
     }
 
@@ -246,11 +252,11 @@ void TNotifyWork_StatusNotify::Func_Begin( Work *work )
     ByteStream bs = statusnotify_work->pkg_->Serialize();
 
     psm_context->logger_.Trace("[状态变更通知][CAID=" SFMT64U "][SID=" SFMT64U "] 向终端发送状态变更通知。 长度：%d  内容：\n%s", 
-                                statusnotify_work->session_info_->CAId(), statusnotify_work->session_info_->Id(),
+                                session_info->CAId(), session_info->Id(),
                                 bs.Size(),
                                 stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
 
-    if ( statusnotify_work->session_info_->term_conn_->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
+    if ( session_info->term_conn_->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
     {
         // and responed process work.
         //         statusnotify_work->work_func_   = TNotifyWork_StatusNotify::Func_ProcessResponed; 

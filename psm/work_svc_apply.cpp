@@ -10,6 +10,14 @@ int SvcApplyWork::AddSendHttpRequestWork(string &service_name, ByteStream &svcap
 
     unsigned int ret_code = RC_SUCCESS;
 
+    shared_ptr<TermSession> sp_ts(svcapply_work->self_session_info_.lock());
+    if (!sp_ts) {
+        psm_context->logger_.Warn("[%s] 开始处理业务申请请求, 终端会话不存在, 返回失败。", log_header_);
+
+        ret_code = PT_RC_TERM_SESSION_NOT_EXIST;
+        return ret_code;
+    }
+
     if ( service_name.empty() )
     {
         psm_context->logger_.Warn("[%s] 开始处理业务申请请求, 协议头为空, 返回失败。", log_header_);
@@ -37,12 +45,12 @@ int SvcApplyWork::AddSendHttpRequestWork(string &service_name, ByteStream &svcap
     string psm_addr = psm_context->busi_server_->Addr();
 
     //设置URL和BODY
-    svcapply_work->http_request_info_.SetRequestURL(svcapply_work->http_request_info_.sm_addr_, svcapply_work->self_session_info_->user_info_.card_id);
+    svcapply_work->http_request_info_.SetRequestURL(svcapply_work->http_request_info_.sm_addr_, sp_ts->user_info_.card_id);
 
     if ( svcapply_work->apply_type_ == TermSvcApplyWork::SelfSvcApply )
     {           
-        PB_TerminalInfoDescriptor terminal_info_desc(svcapply_work->self_session_info_->terminal_info_desc_.terminal_class_,svcapply_work->self_session_info_->terminal_info_desc_.terminal_sub_class_, svcapply_work->self_session_info_->user_info_.card_id);
-        PB_UserInfoDescriptor     user_info_desc(svcapply_work->self_session_info_->user_info_desc_.user_info_);
+        PB_TerminalInfoDescriptor terminal_info_desc(sp_ts->terminal_info_desc_.terminal_class_,sp_ts->terminal_info_desc_.terminal_sub_class_, sp_ts->user_info_.card_id);
+        PB_UserInfoDescriptor     user_info_desc(sp_ts->user_info_desc_.user_info_);
         ByteStream bs_user_info = user_info_desc.SerializeFull();
         ByteStream bs_term_info = terminal_info_desc.SerializeFull();
 
@@ -53,10 +61,18 @@ int SvcApplyWork::AddSendHttpRequestWork(string &service_name, ByteStream &svcap
     }
     else
     {
-        PB_TerminalInfoDescriptor terminal_info_desc1(svcapply_work->self_session_info_->terminal_info_desc_.terminal_class_, svcapply_work->self_session_info_->terminal_info_desc_.terminal_sub_class_, svcapply_work->self_session_info_->user_info_.card_id);
-        PB_UserInfoDescriptor     user_info_desc1(svcapply_work->self_session_info_->user_info_desc_.user_info_);
-        PB_TerminalInfoDescriptor terminal_info_desc2(svcapply_work->cross_session_info_->terminal_info_desc_.terminal_class_, svcapply_work->cross_session_info_->terminal_info_desc_.terminal_sub_class_, svcapply_work->cross_session_info_->user_info_.card_id);
-        PB_UserInfoDescriptor     user_info_desc2(svcapply_work->cross_session_info_->user_info_desc_.user_info_);
+        PB_TerminalInfoDescriptor terminal_info_desc1(sp_ts->terminal_info_desc_.terminal_class_, sp_ts->terminal_info_desc_.terminal_sub_class_, sp_ts->user_info_.card_id);
+        PB_UserInfoDescriptor     user_info_desc1(sp_ts->user_info_desc_.user_info_);
+        shared_ptr<TermSession> sp_cross_ts(svcapply_work->cross_session_info_.lock());
+        if (!sp_cross_ts) {
+            psm_context->logger_.Trace("%s 处理业务申请请求, 协议头为：%s, 该协议头对应的SM地址：%s******Cross终端会话不存在******", 
+                    log_header_, service_name.c_str(), svcapply_work->http_request_info_.sm_addr_.c_str());
+            ret_code = PT_RC_TERM_SESSION_NOT_EXIST;
+            return ret_code;
+        }
+
+        PB_TerminalInfoDescriptor terminal_info_desc2(sp_cross_ts->terminal_info_desc_.terminal_class_, sp_cross_ts->terminal_info_desc_.terminal_sub_class_, sp_cross_ts->user_info_.card_id);
+        PB_UserInfoDescriptor     user_info_desc2(sp_cross_ts->user_info_desc_.user_info_);
         ByteStream bs_user_info1 = user_info_desc1.SerializeFull();
         ByteStream bs_term_info1 = terminal_info_desc1.SerializeFull();
         ByteStream bs_user_info2 = user_info_desc2.SerializeFull();
@@ -204,7 +220,8 @@ void HTTPAysnRequestInfo::SetRequestBody( ByteStream &svc_self_apply_desc, ByteS
     bs.Add("\r\nPsm=");
     bs.Add(psm_addr);
 
-    bs.PutUint16(0);
+    //bs.PutUint16(0);
+    bs.Add("\r\n");
 
     request_body_ = bs;
 }
@@ -231,7 +248,8 @@ void HTTPAysnRequestInfo::SetRequestBody( ByteStream &svc_cross_apply_desc, Byte
     bs.Add("\r\nPsm=");
     bs.Add(psm_addr);
 
-    bs.PutUint16(0);
+    //bs.PutUint16(0);
+    bs.Add("\r\n");
     
     request_body_ = bs;
 }

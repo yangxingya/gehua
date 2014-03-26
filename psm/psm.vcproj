@@ -278,10 +278,6 @@
 				>
 			</File>
 			<File
-				RelativePath=".\timeouttimer.h"
-				>
-			</File>
-			<File
 				RelativePath=".\work_def.h"
 				>
 			</File>
@@ -359,6 +355,10 @@
 				RelativePath=".\sessionmgr\termsession.h"
 				>
 			</File>
+			<File
+				RelativePath=".\sessionmgr\timeouttimer.h"
+				>
+			</File>
 		</Filter>
 		<Filter
 			Name="businesslogic"
@@ -373,14 +373,6 @@
 			</File>
 			<File
 				RelativePath=".\businesslogic\workpool.h"
-				>
-			</File>
-		</Filter>
-		<Filter
-			Name="config"
-			>
-			<File
-				RelativePath=".\config\config.h"
 				>
 			</File>
 		</Filter>

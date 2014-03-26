@@ -20,45 +20,70 @@ void TermRequestProcessSvr::GetUserInfoParam( string &user_info_str, map<string,
     out_param_map = stringtool::to_string_map(user_info_str, '&', '=');
 }
 
-void TermRequestProcessSvr::AddLoginRequestWork( TermConnection *conn, PtLoginRequest *pkg )
+void TermRequestProcessSvr::AddLoginRequestWork( weak_ptr<TermSession> ts, PtLoginRequest *pkg )
 {
-    TRequestWork_Login *work = new TRequestWork_Login(pkg, conn->term_session_, psm_context_);
-    psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
+    shared_ptr<TermSession> sp_ts(ts.lock());
+    if (!sp_ts) {
+        psm_context_->logger_.Warn("[终端登录请求]******终端会话不存在******");
+        return;
+    }
+
+    TRequestWork_Login *work = new TRequestWork_Login(pkg, sp_ts, psm_context_);
+    psm_context_->busi_pool_->AddWork(work, sp_ts->CAId());
 }
 
-void TermRequestProcessSvr::AddLogoutRequestWork( TermConnection *conn, PtLogoutRequest *pkg )
+void TermRequestProcessSvr::AddLogoutRequestWork( weak_ptr<TermSession> ts, PtLogoutRequest *pkg )
 {
-    TRequestWork_Logout *work = new TRequestWork_Logout(pkg, conn->term_session_, psm_context_);
-    psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
+    shared_ptr<TermSession> sp_ts(ts.lock());
+    if (!sp_ts) {
+        psm_context_->logger_.Warn("[终端退出请求]******终端会话不存在******");
+        return;
+    }
+
+    TRequestWork_Logout *work = new TRequestWork_Logout(pkg, sp_ts, psm_context_);
+    psm_context_->busi_pool_->AddWork(work, sp_ts->CAId());
 }
 
-void TermRequestProcessSvr::AddHeartbeatWork( TermConnection *conn, PtHeartbeatRequest *pkg )
+void TermRequestProcessSvr::AddHeartbeatWork( weak_ptr<TermSession> ts, PtHeartbeatRequest *pkg )
 {
-    TRequestWork_Heartbeat *work = new TRequestWork_Heartbeat(pkg, conn->term_session_, psm_context_);
-    psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
+    shared_ptr<TermSession> sp_ts(ts.lock());
+    if (!sp_ts) {
+        psm_context_->logger_.Warn("[终端心跳请求]******终端会话不存在******");
+        return;
+    }
+
+    TRequestWork_Heartbeat *work = new TRequestWork_Heartbeat(pkg, sp_ts, psm_context_);
+    psm_context_->busi_pool_->AddWork(work, sp_ts->CAId());
 }
 
-void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyRequest *pkg )
+void TermRequestProcessSvr::AddSvcApplyWork( weak_ptr<TermSession> ts, PtSvcApplyRequest *pkg )
 {
+    shared_ptr<TermSession> sp_ts(ts.lock());
+    if (!sp_ts) {
+        psm_context_->logger_.Warn("[终端业务申请请求]******终端会话不存在******");
+        return;
+    }
+
     unsigned int ret_code = PT_RC_MSG_FORMAT_ERROR;
     do 
     {
         TermSvcApplyWork *svcapply_work = NULL;
-        if ( pkg->svc_self_apply_desc_.valid_ && (conn->term_session_->Id() == pkg->svc_self_apply_desc_.session_id_) )
+        if ( pkg->svc_self_apply_desc_.valid_ && (sp_ts->Id() == pkg->svc_self_apply_desc_.session_id_) )
         {
-            svcapply_work = new TermSvcApplyWork(conn, pkg, conn->term_session_);
+            svcapply_work = new TermSvcApplyWork(sp_ts->term_conn_, pkg, sp_ts);
         }
-        else if ( pkg->svc_cross_apply_desc_.valid_ && (conn->term_session_->Id() == pkg->svc_cross_apply_desc_.init_session_id_) )
+        else if ( pkg->svc_cross_apply_desc_.valid_ && (sp_ts->Id() == pkg->svc_cross_apply_desc_.init_session_id_) )
         {
-            TermSession *show_term_session = psm_context_->busi_pool_->FindTermSessionById(pkg->svc_cross_apply_desc_.show_session_id_);
+            weak_ptr<TermSession> wp_show_term_session = psm_context_->busi_pool_->FindTermSessionById(pkg->svc_cross_apply_desc_.show_session_id_);
+            shared_ptr<TermSession> show_term_session(wp_show_term_session.lock());
             if ( show_term_session != NULL )
             {
-                svcapply_work = new TermSvcApplyWork(conn, pkg, conn->term_session_, show_term_session);
+                svcapply_work = new TermSvcApplyWork(sp_ts->term_conn_, pkg, sp_ts, show_term_session);
             }
             else
             {
                 psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=" SFMT64U "] 申请呈现端的会话[SID=" SFMT64U "]不存在。",  
-                                            conn->term_session_->CAId(), conn->term_session_->Id(),
+                                            sp_ts->CAId(), sp_ts->Id(),
                                             pkg->svc_cross_apply_desc_.show_session_id_);    
 
                 ret_code = PT_RC_MSG_FORMAT_ERROR;
@@ -68,7 +93,7 @@ void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyReq
         else
         {
             psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=" SFMT64U "] 申请参数不合法。",  
-                                        conn->term_session_->CAId(), conn->term_session_->Id());    
+                                        sp_ts->CAId(), sp_ts->Id());    
 
             ret_code = PT_RC_MSG_FORMAT_ERROR;
             break;
@@ -77,7 +102,7 @@ void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyReq
         svcapply_work->user_ptr_    = psm_context_;
         svcapply_work->work_func_   = TermSvcApplyWork::Func_Begin;
 
-        psm_context_->busi_pool_->AddWork(svcapply_work, conn->term_session_->CAId());
+        psm_context_->busi_pool_->AddWork(svcapply_work, sp_ts->CAId());
         return;
     } while (0);
     
@@ -87,11 +112,11 @@ void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyReq
     ByteStream response_pkg = svcapply_response.Serialize();
 
     psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=" SFMT64U "] 处理业务申请请求失败，向终端发送失败应答。长度：%d  内容：\n%s",  
-                                conn->term_session_->CAId(), conn->term_session_->Id(),
+                                sp_ts->CAId(), sp_ts->Id(),
                                 response_pkg.Size(),
                                 stringtool::to_hex_string((const char*)response_pkg.GetBuffer(),response_pkg.Size()).c_str());    
         
-    if ( conn->Write(response_pkg.GetBuffer(), response_pkg.Size()) )
+    if ( sp_ts->term_conn_->Write(response_pkg.GetBuffer(), response_pkg.Size()) )
     {
         //TODO:暂时默认发送成功
     }
@@ -99,14 +124,27 @@ void TermRequestProcessSvr::AddSvcApplyWork( TermConnection *conn, PtSvcApplyReq
     delete pkg;
 }
 
-void TermRequestProcessSvr::AddStatusQueryWork( TermConnection *conn, PtStatusQueryRequest *pkg )
+void TermRequestProcessSvr::AddStatusQueryWork( weak_ptr<TermSession> ts, PtStatusQueryRequest *pkg )
 {
-    TRequestWork_StatusQuery *work = new TRequestWork_StatusQuery(pkg, conn->term_session_, psm_context_);
-    psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
+    shared_ptr<TermSession> sp_ts(ts.lock());
+    if (!sp_ts) {
+        psm_context_->logger_.Warn("[状态查询任务]******终端会话不存在******");
+        return;
+    }
+
+    TRequestWork_StatusQuery *work = new TRequestWork_StatusQuery(pkg, sp_ts, psm_context_);
+    psm_context_->busi_pool_->AddWork(work, sp_ts->CAId());
 }
 
-void TermRequestProcessSvr::AddGetSvrGroupWork( TermConnection *conn, PtGetSvcGroupRequest *pkg )
+
+void TermRequestProcessSvr::AddGetSvrGroupWork( weak_ptr<TermSession> ts, PtGetSvcGroupRequest *pkg )
 {
-    TRequestWork_GetSvcGroup *work = new TRequestWork_GetSvcGroup(pkg, conn->term_session_, psm_context_);
-    psm_context_->busi_pool_->AddWork(work, conn->term_session_->CAId());
+    shared_ptr<TermSession> sp_ts(ts.lock());
+    if (!sp_ts) {
+        psm_context_->logger_.Warn("[获取服务分组任务]******终端会话不存在******");
+        return;
+    }
+
+    TRequestWork_GetSvcGroup *work = new TRequestWork_GetSvcGroup(pkg, sp_ts, psm_context_);
+    psm_context_->busi_pool_->AddWork(work, sp_ts->CAId());
 }

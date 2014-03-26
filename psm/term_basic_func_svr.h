@@ -18,23 +18,22 @@ public:
     /**
      * @brief 添加一个键值转发工作任务
      */
-    void AddKeyTransmitWork(TermConnection *conn, PtKeyMappingRequest *pkg);
+    void AddKeyTransmitWork(weak_ptr<TermSession> ts, PtKeyMappingRequest *pkg);
 
     /**
      * @brief 添加一个业务切换通知工作任务
      */
-    void AddSvcSwitchNotifyWork(TermConnection *conn, PtSvcSwitchRequest *pkg);
-    void AddSvcSwitchNotifyWork(TermConnection *conn, PtSvcSwitchResponse *pkg);
+    void AddSvcSwitchNotifyWork(weak_ptr<TermSession> ts, PtSvcSwitchRequest *pkg);
+    void AddSvcSwitchNotifyWork(weak_ptr<TermSession> ts, PtSvcSwitchResponse *pkg);
 
     /**
      * @brief 添加一个状态变更通知工作任务
      */
-    void AddStatusPChangeNotifyWork(TermConnection *conn, PtStatusNotifyRequest *pkg);
-    void AddStatusPChangeNotifyWork(TermConnection *conn, PtStatusNotifyResponse *pkg);
+    void AddStatusPChangeNotifyWork(weak_ptr<TermSession> ts, PtStatusNotifyRequest *pkg);
+    void AddStatusPChangeNotifyWork(weak_ptr<TermSession> ts, PtStatusNotifyResponse *pkg);
 
     void NotifyAllTerminalStatusPChanged(CASession *ca_session, uint64_t ignore_session_id);
 
-protected:
 private:
     PSMContext *psm_context_;
 };

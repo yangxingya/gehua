@@ -2,6 +2,12 @@
 #include "casessionmgr.h"
 #include "casession.h"
 
+CASessionMgr::CASessionMgr(Logger &logger, uint32_t timer_span)
+    : logger_(logger), conn_timeout_timer_(logger)
+{
+    conn_timeout_timer_.Activate(timer_span);
+}
+
 CASession* CASessionMgr::FindCASessionById(caid_t caid)
 {
     map<caid_t, CASession*>::iterator 
@@ -36,7 +42,7 @@ void CASessionMgr::Attach(CASession *cs)
 {
     ca_session_map_[cs->Id()] = cs;
 
-    map<uint64_t, weak_ptr<TermSession> >::iterator 
+    map<uint64_t, shared_ptr<TermSession> >::iterator 
         it = cs->terminal_session_map_.begin();
 
     for (; it != cs->terminal_session_map_.end(); ++it) {
@@ -52,11 +58,12 @@ CASession* CASessionMgr::Detach(caid_t caid)
     if (it != ca_session_map_.end()) {
 
         cs = it->second;
-
-        map<uint64_t, weak_ptr<TermSession> >::iterator 
-            tit = it->second->terminal_session_map_.begin();
-
+   
         map<uint64_t, CASession*>::iterator cit;
+
+        map<uint64_t, shared_ptr<TermSession> >::iterator 
+            tit = it->second->terminal_session_map_.begin();
+        //删除终端会话id映射CA会话表中的 CA会话的终端会话id列表。
         for (; tit != cs->terminal_session_map_.end(); ++tit) {
             cit = terminal_id_ca_session_map_.find(tit->first);
             if (cit != terminal_id_ca_session_map_.end()) {
@@ -66,4 +73,19 @@ CASession* CASessionMgr::Detach(caid_t caid)
         ca_session_map_.erase(it);
     }
     return cs;
+}
+
+void CASessionMgr::AttachTermSessionInfo( uint64_t ts_id, CASession *ca_session )
+{
+    terminal_id_ca_session_map_[ts_id] = ca_session;
+}
+
+void CASessionMgr::DetachTermSessionInfo( uint64_t ts_id )
+{
+    map<uint64_t, CASession*>::iterator 
+        it = terminal_id_ca_session_map_.find(ts_id);
+    if (it != terminal_id_ca_session_map_.end())
+    {
+        terminal_id_ca_session_map_.erase(it);
+    }
 }

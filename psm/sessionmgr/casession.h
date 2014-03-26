@@ -28,13 +28,13 @@ public:
 
     weak_ptr<TermSession> GetSTBTermSession();
 
-    map<uint64_t, weak_ptr<TermSession> > terminal_session_map_;
+    map<uint64_t, shared_ptr<TermSession> > terminal_session_map_;
 private:
     caid_t caid_;
     TimeOutTimer& timeout_timer_;
 
-    void OnAdd(TermConnection *tc);
-    void OnRemove(TermConnection *tc);
+    void OnAdd(weak_ptr<TermSession> ts);
+    void OnRemove(uint64_t ts_id);
 
     friend struct CASessionMgr;
 };

@@ -1,6 +1,8 @@
 
 #include "termserver.h"
 #include "../psmcontext.h"
+#include "../sessionmgr/termsession.h"
+#include "../businesslogic/businesspool.h"
 
 AioConnection* TermServer::OnConnected( TCPConnection* tcp )
 {
@@ -18,4 +20,24 @@ AioConnection* TermServer::OnConnected( TCPConnection* tcp )
         reject_connections_++;
     }
     return (AioConnection*)new_conn;
+}
+
+void TermServer::OnDisconnected(AioConnection* conn)
+{
+    conn->SetDirty();
+    disconnections_++;
+    // delete connection......
+    TermConnection *term_conn = (TermConnection*)conn;
+
+    logger_->Info("[终端连接被终端断开]");
+    shared_ptr<TermSession> sp_ts(term_conn->term_session_.lock());
+    if (sp_ts) {
+        psm_ctx_->busi_pool_->DelTermSession(sp_ts);
+    }
+
+    term_conn->SetDirty();
+    //todo:: delete ???
+    //delete term_conn;
+
+    total_connections_--;
 }

@@ -6,7 +6,7 @@
 #if !defined gehua_psm_context_h_
 #define gehua_psm_context_h_
 
-#include "config/config.h"
+#include "../common/config/config.h"
 #include "tcpserver/termserver.h"
 #include "tcpserver/busiserver.h"
 #include "businesslogic/businesspool.h"

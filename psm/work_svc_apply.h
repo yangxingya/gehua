@@ -106,6 +106,9 @@ struct SMSvcApplyWork : public SvcApplyWork
 
     int SendResponed(unsigned int ret_code);
 
+    // 当SM申请的业务为本地业务时，则调用该接口向终端发送业务切换通知
+    void AddNotifySvcSwitchWork();
+
     static void Func_Begin(Work *work);
     static void Func_Inited( Work *work );
     static void Func_End(Work *work);

@@ -150,9 +150,8 @@ void TermSvcApplyWork::Func_Begin( Work *work )
             apply_desc_buf = svc_cross_desc.SerializeFull();
         }
 
-        psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头...", svcapply_work->log_header_);
-
         string service_name = svcapply_work->GetServiceName(apply_url);
+        psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头为：%s.", svcapply_work->log_header_, service_name.c_str());
 
         if ( psm_context->business_apply_svr_->IsPHONEControlSvc(service_name.c_str()) )
         {
@@ -177,6 +176,14 @@ void TermSvcApplyWork::Func_Begin( Work *work )
 
             TermSvcApplyWork::Func_End(work);
             return;
+        }
+
+        if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+        {
+            psm_context->logger_.Warn("%s 开始处理业务申请请求, 获取协议头为：%s,该协议头系统不支持。", svcapply_work->log_header_, service_name.c_str());
+
+            ret_code = ST_RC_TERM_APPLY_SVC_ERROR;
+            break;
         }
 
         svcapply_work->run_step_  = TermSvcApplyWork::SvcApply_Init_begin;
@@ -326,7 +333,7 @@ void TermSvcApplyWork::Func_Inited( Work *work )
                             need_send_keymap_indicate                = false;
                         }
 
-                        psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session->term_conn_, svcswitch_request);
+                        psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session, svcswitch_request);
                     }
                 } 
             }
@@ -348,7 +355,7 @@ void TermSvcApplyWork::Func_Inited( Work *work )
                 PtSvcSwitchRequest *svcswitch_request = new PtSvcSwitchRequest;
                 svcswitch_request->keymap_indicate_desc_ = term_keymaping_indicate_desc;
 
-                psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session->term_conn_, svcswitch_request);
+                psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session, svcswitch_request);
             }
         }
 

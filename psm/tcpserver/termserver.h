@@ -47,12 +47,7 @@ struct TermServer : public AioTcpServer
     }
 
     virtual AioConnection* OnConnected(TCPConnection* tcp);
-    virtual void OnDisconnected(AioConnection* conn)
-    {
-        conn->SetDirty();
-        disconnections_++;
-        total_connections_--;
-    }
+    virtual void OnDisconnected(AioConnection* conn);
 
     virtual void OnDataReceived(AioConnection* conn)
     {

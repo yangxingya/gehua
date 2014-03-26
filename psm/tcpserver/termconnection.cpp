@@ -51,14 +51,16 @@ void TermConnection::OnDataReceived()
                 break;  
             }
 
-            term_session_ = psm_ctx_->busi_pool_->GenTermSession((PtLoginRequest *)msg, this);
-            if (!term_session_) {
+            weak_ptr<TermSession> term_session = psm_ctx_->busi_pool_->GenTermSession((PtLoginRequest *)msg, this);
+            shared_ptr<TermSession> sp_term_session(term_session.lock());
+            if (!sp_term_session) {
                 LOG_WARN("[%s:TCP] 终端连接后第一个请求验证失败：%s", 
                          IdString().c_str(), 
                          GetPeerAddr().c_str());
                 SetDirty();
                 break;
             }
+            term_session_ = sp_term_session;
             login_ = true;
         }
 
@@ -67,63 +69,63 @@ void TermConnection::OnDataReceived()
         case CLOUDv2_PT_TERM_LOGIN_REQUEST:      
             {
                 PtLoginRequest *pkt = (PtLoginRequest*)msg;
-                psm_ctx_->term_request_process_svr_->AddLoginRequestWork(this, pkt);
+                psm_ctx_->term_request_process_svr_->AddLoginRequestWork(term_session_, pkt);
             }
 
             break;
         case CLOUDv2_PT_TERM_LOGOUT_REQUEST:                
             {
                 PtLogoutRequest *pkt = (PtLogoutRequest*)msg;
-                psm_ctx_->term_request_process_svr_->AddLogoutRequestWork(this, pkt);
+                psm_ctx_->term_request_process_svr_->AddLogoutRequestWork(term_session_, pkt);
             }
 
             break;
         case CLOUDv2_PT_TERM_HEARTBEAT_REQUEST:  
             {
                 PtHeartbeatRequest *pkt = (PtHeartbeatRequest*)msg;
-                psm_ctx_->term_request_process_svr_->AddHeartbeatWork(this, pkt);
+                psm_ctx_->term_request_process_svr_->AddHeartbeatWork(term_session_, pkt);
             }
 
             break;
         case CLOUDv2_PT_TERM_SVCAPPLY_REQUEST:
             {
                 PtSvcApplyRequest *pkt = (PtSvcApplyRequest *)msg;
-                psm_ctx_->term_request_process_svr_->AddSvcApplyWork(this, pkt);
+                psm_ctx_->term_request_process_svr_->AddSvcApplyWork(term_session_, pkt);
             }
 
             break;
         case CLOUDv2_PT_TERM_STATUSQUERY_REQUEST:
             {
                 PtStatusQueryRequest *pkt = (PtStatusQueryRequest *)msg;
-                psm_ctx_->term_request_process_svr_->AddStatusQueryWork(this, pkt);
+                psm_ctx_->term_request_process_svr_->AddStatusQueryWork(term_session_, pkt);
             }
 
             break;
         case CLOUDv2_PT_TERM_KEYMAPPING_REQUEST:
             {
                 PtKeyMappingRequest *pkt = (PtKeyMappingRequest *)msg;
-                psm_ctx_->term_basic_func_svr_->AddKeyTransmitWork(this, pkt);
+                psm_ctx_->term_basic_func_svr_->AddKeyTransmitWork(term_session_, pkt);
             }
 
             break;
         case CLOUDv2_PT_TERM_GETSVCGROUP_REQUEST:
             {
                 PtGetSvcGroupRequest *pkt = (PtGetSvcGroupRequest *)msg;
-                psm_ctx_->term_request_process_svr_->AddGetSvrGroupWork(this, pkt);
+                psm_ctx_->term_request_process_svr_->AddGetSvrGroupWork(term_session_, pkt);
             }
             break;
 
         case CLOUDv2_PT_TERM_SVCSWITCH_RESPONSE:
             {
                 PtSvcSwitchResponse *pkt = (PtSvcSwitchResponse *)msg;
-                psm_ctx_->term_basic_func_svr_->AddSvcSwitchNotifyWork(this, pkt);
+                psm_ctx_->term_basic_func_svr_->AddSvcSwitchNotifyWork(term_session_, pkt);
             }
 
             break;
         case CLOUDv2_PT_TERM_STATUSNOTIFY_RESPONSE:
             {
                 PtStatusNotifyResponse *pkt = (PtStatusNotifyResponse *)msg;
-                psm_ctx_->term_basic_func_svr_->AddStatusPChangeNotifyWork(this, pkt);
+                psm_ctx_->term_basic_func_svr_->AddStatusPChangeNotifyWork(term_session_, pkt);
             }
 
             break;
