@@ -3,11 +3,11 @@
 #include "./sessionmgr/casession.h"
 #include "./sessionmgr/termsession.h"
 
-SMSvcApplyWork::SMSvcApplyWork( AioConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info )
+SMSvcApplyWork::SMSvcApplyWork( BusiConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info )
 {
     apply_type_             = SelfSvcApply;
-    conn_                   = conn;
     pkg_                    = pkg;
+	conn_                   = conn;
     self_session_info_      = self_session_info;
 
     run_step_               = SvcApply_Begin;
@@ -24,10 +24,10 @@ SMSvcApplyWork::SMSvcApplyWork( AioConnection *conn, PbSvcApplyRequest *pkg, wea
         _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
-SMSvcApplyWork::SMSvcApplyWork( AioConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info )
+SMSvcApplyWork::SMSvcApplyWork( BusiConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info )
 {
     apply_type_             = CorssSvcApply;
-    conn_                   = conn;
+	conn_                   = conn;
     pkg_                    = pkg;
     self_session_info_      = self_session_info;
     cross_session_info_     = cross_session_info;
@@ -76,7 +76,9 @@ void SMSvcApplyWork::AddNotifySvcSwitchWork()
 {
     PSMContext *psm_context = (PSMContext*)user_ptr_;
 
-    psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头:%s ,该协议头为SM不支持的本地协议头，创建通知终端业务切换工作任务...", log_header_);
+	//string service_name = svcapply_work->GetServiceName(pkg_->svc_self_apply_desc_.apply_url_);
+
+    psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头:%s ,该协议头为SM不支持的本地协议头，创建通知终端业务切换工作任务...", log_header_, pkg_->svc_self_apply_desc_.apply_url_.c_str());
     if ( apply_type_ == TermSvcApplyWork::SelfSvcApply )
     {
         // 通知发起端业务切换
@@ -106,7 +108,7 @@ void SMSvcApplyWork::AddNotifySvcSwitchWork()
         psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(cross_session_info_, svcswitch_request_show);                
     }
 
-    psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头:%s ,该协议头为SM不支持的本地协议头，创建通知终端业务切换工作任务完成。", log_header_);
+    psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头:%s ,该协议头为SM不支持的本地协议头，创建通知终端业务切换工作任务完成。", log_header_, pkg_->svc_self_apply_desc_.apply_url_.c_str());
 }
 
 void SMSvcApplyWork::Func_Begin( Work *work )
@@ -120,7 +122,29 @@ void SMSvcApplyWork::Func_Begin( Work *work )
         const char *apply_url = NULL;
         ByteStream apply_desc_buf;
 
-        psm_context->logger_.Trace("%s 检查BackURL，如果为空，则需要补填为上一个本地业务的URL...", svcapply_work->log_header_);
+		if ( svcapply_work->apply_type_ == TermSvcApplyWork::SelfSvcApply )
+		{
+			apply_url = svcapply_work->pkg_->svc_self_apply_desc_.apply_url_.c_str();
+		}
+		else
+		{
+			apply_url = svcapply_work->pkg_->svc_cross_apply_desc_.init_apply_url_.c_str();
+		}
+
+		string service_name = svcapply_work->GetServiceName(apply_url);
+		psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头为：%s.", svcapply_work->log_header_, service_name.c_str());
+
+		if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+		{ 
+			// 当收到的业务申请请求url的协议头为非SM支持的协议头时，需要将该业务申请直接转发给对应终端，通知终端业务切换；            
+			svcapply_work->AddNotifySvcSwitchWork();
+
+			psm_context->logger_.Trace("%s 添加终端业务切换通知工作任务成功，向SM发送成功应答。", svcapply_work->log_header_);
+
+			svcapply_work->SendResponed(RC_SUCCESS);
+			TermSvcApplyWork::Func_End(work);
+			return;
+		}
 
         if ( svcapply_work->apply_type_ == TermSvcApplyWork::SelfSvcApply )
         {
@@ -200,22 +224,62 @@ void SMSvcApplyWork::Func_Begin( Work *work )
             apply_desc_buf  = svcapply_work->pkg_->svc_cross_apply_desc_.SerializeFull();
         }
 
-        string service_name = svcapply_work->GetServiceName(apply_url);
-        psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头为：%s.", svcapply_work->log_header_, service_name.c_str());
+		/*
+		psm_context->logger_.Trace("%s 检查BackURL，如果为空，则需要补填为上一个本地业务的URL...", svcapply_work->log_header_);
 
-        if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
-        { 
-            // 当收到的业务申请请求url的协议头为非SM支持的协议头时，需要将该业务申请直接转发给对应终端，通知终端业务切换；            
-            svcapply_work->AddNotifySvcSwitchWork();
+		if ( svcapply_work->apply_type_ == TermSvcApplyWork::SelfSvcApply )
+		{
+			if ( svcapply_work->pkg_->svc_self_apply_desc_.back_url_.empty() )
+			{
+				psm_context->logger_.Trace("%s 本屏业务申请的BackURL为空，补填为:%s", svcapply_work->log_header_, svcapply_work->self_session_info_->last_local_svc_url_.c_str());
+				svcapply_work->pkg_->svc_self_apply_desc_.back_url_ = svcapply_work->self_session_info_->last_local_svc_url_;
+			}
+			else
+			{
+				string service_name = svcapply_work->GetServiceName(svcapply_work->pkg_->svc_self_apply_desc_.back_url_.c_str());
+				if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+				{
+					svcapply_work->self_session_info_->last_local_svc_url_ = svcapply_work->pkg_->svc_self_apply_desc_.back_url_;
+				}
+			}
 
-            psm_context->logger_.Warn("%s 添加终端业务切换通知工作任务成功，项sm发送成功应答。", svcapply_work->log_header_);
+			apply_desc_buf  = svcapply_work->pkg_->svc_self_apply_desc_.SerializeFull();
+		}
+		else
+		{
+			if ( svcapply_work->pkg_->svc_cross_apply_desc_.init_back_url_.empty() )
+			{
+				psm_context->logger_.Trace("%s 开始处理业务申请请求, 终端业务申请发起方的BackURL为空，需要补为上个业务的URL...", svcapply_work->log_header_);
+				svcapply_work->pkg_->svc_cross_apply_desc_.init_back_url_ = svcapply_work->self_session_info_->last_local_svc_url_;
+			}
+			else
+			{
+				string service_name = svcapply_work->GetServiceName(svcapply_work->pkg_->svc_cross_apply_desc_.init_back_url_.c_str());
+				if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+				{
+					svcapply_work->self_session_info_->last_local_svc_url_ = svcapply_work->pkg_->svc_cross_apply_desc_.init_back_url_;
+				}
+			}
 
-            svcapply_work->SendResponed(RC_SUCCESS);
-            TermSvcApplyWork::Func_End(work);
-            return;
-        }
+			if ( svcapply_work->pkg_->svc_cross_apply_desc_.show_back_url_.empty() )
+			{
+				psm_context->logger_.Trace("%s 开始处理业务申请请求, 终端业务申请呈现方的BackURL为空，需要补为上个业务的URL...", svcapply_work->log_header_);
+				svcapply_work->pkg_->svc_cross_apply_desc_.show_back_url_ = svcapply_work->cross_session_info_->last_local_svc_url_;
+			}
+			else
+			{
+				string service_name = svcapply_work->GetServiceName(svcapply_work->pkg_->svc_cross_apply_desc_.show_back_url_.c_str());
+				if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+				{
+					svcapply_work->cross_session_info_->last_local_svc_url_ = svcapply_work->pkg_->svc_cross_apply_desc_.show_back_url_;
+				}
+			}
 
-        svcapply_work->run_step_  = SMSvcApplyWork::SvcApply_Init_begin;
+			apply_desc_buf  = svcapply_work->pkg_->svc_cross_apply_desc_.SerializeFull();
+		}
+		*/
+
+		svcapply_work->run_step_  = SMSvcApplyWork::SvcApply_Init_begin;
         svcapply_work->work_func_ = SMSvcApplyWork::Func_Inited;
 
         ret_code = svcapply_work->AddSendHttpRequestWork(service_name, apply_desc_buf);
@@ -312,12 +376,18 @@ void SMSvcApplyWork::Func_Inited( Work *work )
 
                     // 通知呈现端业务切换
                     PtSvcSwitchRequest *svcswitch_request = new PtSvcSwitchRequest;
-                    svcswitch_request->svc_url_desc_ = *iter;
+					svcswitch_request->svc_url_desc_.url_           = iter->url_;
+					svcswitch_request->svc_url_desc_.back_url_      = iter->back_url_;
+					svcswitch_request->svc_url_desc_.sm_session_id_ = iter->sm_session_id_;
+					svcswitch_request->svc_url_desc_.valid_         = true;
+                    //svcswitch_request->svc_url_desc_ = *iter;
                     if ( need_send_keymap_indicate && (sm_keymaping_indicate_desc.session_id_ == iter->session_id_) )
                     {                       
                         svcswitch_request->keymap_indicate_desc_ = term_keymaping_indicate_desc;
                         need_send_keymap_indicate                = false;
                     }
+
+					psm_context->logger_.Warn("%s 处理业务申请请求, 添加业务切换通知工作任务。 \n目标终端SID：" SFMT64U "", svcapply_work->log_header_);
 
                     psm_context->term_basic_func_svr_->AddSvcSwitchNotifyWork(show_term_session, svcswitch_request);
                 }

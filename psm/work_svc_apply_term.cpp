@@ -3,10 +3,9 @@
 #include "./sessionmgr/casession.h"
 #include "./sessionmgr/termsession.h"
 
-TermSvcApplyWork::TermSvcApplyWork( AioConnection *conn, PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info )
+TermSvcApplyWork::TermSvcApplyWork(PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info )
 {
     apply_type_             = SelfSvcApply;
-    conn_                   = conn;
     pkg_                    = pkg;
     self_session_info_      = self_session_info;
 
@@ -24,10 +23,9 @@ TermSvcApplyWork::TermSvcApplyWork( AioConnection *conn, PtSvcApplyRequest *pkg,
         _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
-TermSvcApplyWork::TermSvcApplyWork( AioConnection *conn, PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info )
+TermSvcApplyWork::TermSvcApplyWork(PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info )
 {
     apply_type_             = CorssSvcApply;
-    conn_                   = conn;
     pkg_                    = pkg;
     self_session_info_      = self_session_info;
     cross_session_info_     = cross_session_info;
@@ -48,11 +46,18 @@ TermSvcApplyWork::TermSvcApplyWork( AioConnection *conn, PtSvcApplyRequest *pkg,
 
 int TermSvcApplyWork::SendResponed( ByteStream &response_buf )
 {
-    if ( this->conn_->Write(response_buf.GetBuffer(), response_buf.Size()) )
-    {
-        //TODO:暂时默认发送成功
-        return 0;
-    }
+	shared_ptr<TermSession> session_info(self_session_info_.lock());
+	if (!session_info) return -1;
+
+	MutexLock lock(session_info->termconn_mtx_);
+
+	if (session_info->term_conn_) {
+		if ( session_info->term_conn_->Write(response_buf.GetBuffer(), response_buf.Size()) )
+		{
+			//TODO:暂时默认发送成功
+			return 0;
+		}
+	}
 
     return -1;
 }
@@ -78,6 +83,52 @@ void TermSvcApplyWork::Func_Begin( Work *work )
     {
         const char *apply_url = NULL;
         ByteStream apply_desc_buf;
+		
+		if ( svcapply_work->apply_type_ == TermSvcApplyWork::SelfSvcApply )
+		{
+			apply_url = svcapply_work->pkg_->svc_self_apply_desc_.apply_url_.c_str();
+		}
+		else
+		{
+			apply_url = svcapply_work->pkg_->svc_cross_apply_desc_.init_apply_url_.c_str();
+		}
+
+		string service_name = svcapply_work->GetServiceName(apply_url);
+		psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头为：%s.", svcapply_work->log_header_, service_name.c_str());
+
+		if ( psm_context->business_apply_svr_->IsPHONEControlSvc(service_name.c_str()) )
+		{
+			psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头:%s ,申请的是手机外设业务，则直接返回成功应答.", svcapply_work->log_header_, service_name.c_str());
+
+			PtSvcApplyResponse svcapply_response(RC_SUCCESS, 0);
+
+			//获取当前CA卡关联的终端组中的机顶盒终端会话ID，并向终端发送映射指示描述符
+			weak_ptr<TermSession> wp_stb_term_session = session_info->ca_session_->GetSTBTermSession();
+			shared_ptr<TermSession> stb_term_session(wp_stb_term_session.lock());
+			if ( stb_term_session != NULL )
+			{
+				svcapply_response.keymap_indicate_desc_.mapping_type_    = 0;
+				svcapply_response.keymap_indicate_desc_.dest_session_id_ = stb_term_session->Id();
+				svcapply_response.keymap_indicate_desc_.valid_           = true;
+
+				svcapply_response.Add(svcapply_response.keymap_indicate_desc_);
+			}
+
+			ByteStream response_pkg = svcapply_response.Serialize();
+			svcapply_work->SendResponed(response_pkg);
+
+			TermSvcApplyWork::Func_End(work);
+			return;
+		}
+
+		if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
+		{
+			psm_context->logger_.Warn("%s 开始处理业务申请请求, 获取协议头为：%s,该协议头系统不支持。", svcapply_work->log_header_, service_name.c_str());
+
+			ret_code = ST_RC_TERM_APPLY_SVC_ERROR;
+			break;
+		}
+		
         if ( svcapply_work->apply_type_ == TermSvcApplyWork::SelfSvcApply )
         {
             if ( svcapply_work->pkg_->svc_self_apply_desc_.back_url_.empty() )
@@ -148,42 +199,6 @@ void TermSvcApplyWork::Func_Begin( Work *work )
                                                       svcapply_work->pkg_->svc_cross_apply_desc_.show_apply_url_, 
                                                       svcapply_work->pkg_->svc_cross_apply_desc_.show_back_url_);
             apply_desc_buf = svc_cross_desc.SerializeFull();
-        }
-
-        string service_name = svcapply_work->GetServiceName(apply_url);
-        psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头为：%s.", svcapply_work->log_header_, service_name.c_str());
-
-        if ( psm_context->business_apply_svr_->IsPHONEControlSvc(service_name.c_str()) )
-        {
-            psm_context->logger_.Trace("%s 开始处理业务申请请求, 获取协议头:%s ,申请的是手机外设业务，则直接返回成功应答.", svcapply_work->log_header_, service_name.c_str());
-
-            PtSvcApplyResponse svcapply_response(RC_SUCCESS, 0);
-
-            //获取当前CA卡关联的终端组中的机顶盒终端会话ID，并向终端发送映射指示描述符
-            weak_ptr<TermSession> wp_stb_term_session = session_info->ca_session_->GetSTBTermSession();
-            shared_ptr<TermSession> stb_term_session(wp_stb_term_session.lock());
-            if ( stb_term_session != NULL )
-            {
-                svcapply_response.keymap_indicate_desc_.mapping_type_    = 0;
-                svcapply_response.keymap_indicate_desc_.dest_session_id_ = stb_term_session->Id();
-                svcapply_response.keymap_indicate_desc_.valid_           = true;
-                
-                svcapply_response.Add(svcapply_response.keymap_indicate_desc_);
-            }
-
-            ByteStream response_pkg = svcapply_response.Serialize();
-            svcapply_work->SendResponed(response_pkg);
-
-            TermSvcApplyWork::Func_End(work);
-            return;
-        }
-
-        if ( !psm_context->business_apply_svr_->IsValidServieName(service_name) )
-        {
-            psm_context->logger_.Warn("%s 开始处理业务申请请求, 获取协议头为：%s,该协议头系统不支持。", svcapply_work->log_header_, service_name.c_str());
-
-            ret_code = ST_RC_TERM_APPLY_SVC_ERROR;
-            break;
         }
 
         svcapply_work->run_step_  = TermSvcApplyWork::SvcApply_Init_begin;

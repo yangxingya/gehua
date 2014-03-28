@@ -5,15 +5,15 @@
 #include "../sessionmgr/termsession.h"
 #include "../psmcontext.h"
 
-BusinessPool::BusinessPool(Logger& logger, int thread_cnt)
-    : psm_ctx_(0)
+BusinessPool::BusinessPool(Logger& logger, PSMContext *psm_ctx, int thread_cnt)
+    : psm_ctx_(psm_ctx)
     , logger_(logger), wk_pool_(logger, thread_cnt)
     , thread_cnt_(thread_cnt)
     , started_(false)
     , global_cnt_(0)
 {
     for (int i = 0; i < thread_cnt; ++i) {
-        pool_relation_ca_session_mgr_.push_back(new CASessionMgr(logger));
+        pool_relation_ca_session_mgr_.push_back(new CASessionMgr(logger, psm_ctx));
     }
 }
 
@@ -36,8 +36,6 @@ void BusinessPool::AddDelayedWork(DelayedWork *delay_wk, caid_t caid)
 
     wk_pool_.Assign(delay_wk, getIdByCAId(caid));
 }
-
-
 
 uint64_t BusinessPool::genTermSessionId(
     double time, uint16_t g_cnt, uint32_t ip, caid_t caid)
@@ -171,7 +169,7 @@ uint32_t BusinessPool::DelTermSession(weak_ptr<TermSession> ts)
     }
 
     cs->Remove(sp_ts->Id());
-    logger_.Warn("[删除终端会话][CAId:" SFMT64U "[TSId:" SFMT64U "]", cs->Id(), sp_ts->Id());
+    logger_.Warn("[删除终端会话][CAId:" SFMT64U "][TSId:" SFMT64U "]", cs->Id(), sp_ts->Id());
 
     CASessionMgr *cs_mgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(sp_ts->Id())];
     cs_mgr->DetachTermSessionInfo(sp_ts->Id());
@@ -181,13 +179,30 @@ uint32_t BusinessPool::DelTermSession(weak_ptr<TermSession> ts)
     //if no terminal session in ca session,
     // remove ca session.
     if (cs->termCnt() == 0) {
-        logger_.Warn("[删除终端会话][CAId:" SFMT64U "[TSId:" SFMT64U "]，CA会话中无终端，删除CA会话", cs->Id(), sp_ts->Id());
+        logger_.Warn("[删除终端会话][CAId:" SFMT64U "][TSId:" SFMT64U "]，CA会话中无终端，删除CA会话", cs->Id(), sp_ts->Id());
         CASessionMgr *cs_mgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(sp_ts->Id())];
         cs_mgr->Detach(cs->Id());
         cs_mgr->Destory(cs);    
     }
 
     return ret;
+}
+
+void BusinessPool::AddToTimer(weak_ptr<TermSession> ts)
+{
+	shared_ptr<TermSession> sp_ts(ts.lock());
+	if (!sp_ts) {
+		logger_.Warn("[添加到超时计时器]******对应的终端会话不存在******");
+		return ;
+	}
+
+	CASessionMgr *cs_mgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(sp_ts->Id())];
+	cs_mgr->AddToTimer(sp_ts);
+}
+
+void BusinessPool::RemoveFromTimer(weak_ptr<TermSession> ts)
+{
+	
 }
 
 bool BusinessPool::Start()
@@ -200,6 +215,7 @@ bool BusinessPool::Start()
 
 void BusinessPool::Stop()
 {
+	wk_pool_.CancelAllWork();
     wk_pool_.Stop();
     started_ = false;
 }
@@ -211,6 +227,7 @@ weak_ptr<TermSession> BusinessPool::FindTermSessionById(uint64_t ts_id)
     CASession *cs = csmgr->FindCASessionByTermSessionId(ts_id);
     if (cs == NULL) return weak_ptr<TermSession>();
     
+	MutexLock lock(cs->termsession_mtx_);
     map<uint64_t, shared_ptr<TermSession> >::iterator 
         it = cs->terminal_session_map_.find(ts_id);
     if (it == cs->terminal_session_map_.end())

@@ -39,30 +39,33 @@ void TermConnection::OnDataReceived()
         // parse successful 
         ByteStream one_packet(recv_buffer_.GetBuffer(),len);            
 
+		uint64_t ts_id = msg->ParseSessionID(one_packet);
+
         recv_buffer_.SetReadPtr(len);
         recv_buffer_.FlushReadPtr();
 
-        //login valid.
-        if (!login_) {
-            if (msg->msg_id_ != CLOUDv2_PT_TERM_LOGIN_REQUEST) {
-                // set session invalid
-                LOG_WARN("[%s:TCP] 终端连接后第一个请求非登录请求：%s, XXXXX:\n%s", IdString().c_str(), GetPeerAddr().c_str(), recv_buffer_.DumpHex(16,true).c_str());
-                SetDirty();
-                break;  
-            }
+		if (!login_) {
+			switch (msg->msg_id_) {
+			case CLOUDv2_PT_TERM_HEARTBEAT_REQUEST:
+				//重用会话。
+				login_ = reused_termsession(ts_id);
+				logger_->Info("新连接登入，%s会话id: "SFMT64U"", login_ ? "重用" : "不重用", ts_id);
+				break;
+			case CLOUDv2_PT_TERM_LOGIN_REQUEST:
+				login_ = gen_termsession(msg);
+				break;
+			default:
+				// set session invalid
+				LOG_WARN("[%s:TCP] 终端连接后第一个请求非登录请求：%s, XXXXX:\n%s", IdString().c_str(), GetPeerAddr().c_str(), recv_buffer_.DumpHex(16,true).c_str());
+				break;
 
-            weak_ptr<TermSession> term_session = psm_ctx_->busi_pool_->GenTermSession((PtLoginRequest *)msg, this);
-            shared_ptr<TermSession> sp_term_session(term_session.lock());
-            if (!sp_term_session) {
-                LOG_WARN("[%s:TCP] 终端连接后第一个请求验证失败：%s", 
-                         IdString().c_str(), 
-                         GetPeerAddr().c_str());
-                SetDirty();
-                break;
-            }
-            term_session_ = sp_term_session;
-            login_ = true;
-        }
+			}
+		}
+
+		if (!login_) {
+			SetDirty();
+			break;
+		}
 
         switch ( msg->msg_id_ )
         {
@@ -134,6 +137,48 @@ void TermConnection::OnDataReceived()
             break;
         }
     }
+}
+
+bool TermConnection::reused_termsession(uint64_t ts_id)
+{
+	if (ts_id == (uint64_t)-1) return false;
+
+	logger_->Info("[终端重新连接到服务器] 会话id: "SFMT64U"", ts_id);
+	weak_ptr<TermSession> ts = psm_ctx_->busi_pool_->FindTermSessionById(ts_id);
+	shared_ptr<TermSession> sp_ts(ts.lock());
+	if (!sp_ts) {
+		logger_->Warn("[终端重新连接到服务器] 会话id: "SFMT64U"。对应的会话不存在，不做响应，终端需要重新分配PSM。", ts_id);
+		return false; 
+	}
+
+	term_session_ = sp_ts;
+	//todo :: lock???
+	TermConnection *old_tc = sp_ts->term_conn_;
+
+	{
+		MutexLock lock(sp_ts->termconn_mtx_);
+		sp_ts->term_conn_ = this;
+	}
+
+	delete old_tc;
+
+	return true;
+}
+
+bool TermConnection::gen_termsession(PtBase *msg)
+{
+	weak_ptr<TermSession> term_session = psm_ctx_->busi_pool_->GenTermSession((PtLoginRequest *)msg, this);
+	shared_ptr<TermSession> sp_term_session(term_session.lock());
+	if (!sp_term_session) {
+		LOG_WARN("[%s:TCP] 终端连接后第一个请求验证失败：%s", 
+			IdString().c_str(), 
+			GetPeerAddr().c_str());
+		SetDirty();
+		return false;
+	}
+	term_session_ = sp_term_session;
+	psm_ctx_->busi_pool_->AddToTimer(term_session_);
+	return true;
 }
 
 int TermConnection::parsePacket( PtBase** msg, uint32_t* len )

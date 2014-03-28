@@ -6,9 +6,8 @@
 #define gehua_atomic_h_
 
 
-struct Atomic
+struct Atomic8
 {
-    
 };
 
 #endif // gehua_atomic_h_

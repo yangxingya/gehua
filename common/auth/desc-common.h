@@ -16,6 +16,13 @@ using ::std::string;
 using ::std::map;
 using ::std::vector;
 
+enum StringNExtraLength {
+    String0ExtraLen = 1,
+    String1ExtraLen = 2,
+    String2ExtraLen = 3,
+    String4ExtraLen = 5,
+};
+
 enum CommonDescriptorTag {
     TagCertIdDesc = 0x01,
     TagCertUserInfoDesc = 0x02,

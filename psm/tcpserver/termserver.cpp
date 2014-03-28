@@ -29,15 +29,17 @@ void TermServer::OnDisconnected(AioConnection* conn)
     // delete connection......
     TermConnection *term_conn = (TermConnection*)conn;
 
-    logger_->Info("[终端连接被终端断开]");
+	uint64_t tid = 0;
+	caid_t   cid = 0;
     shared_ptr<TermSession> sp_ts(term_conn->term_session_.lock());
     if (sp_ts) {
-        psm_ctx_->busi_pool_->DelTermSession(sp_ts);
+		tid = sp_ts->Id();
+		cid = sp_ts->CAId();
     }
 
+	logger_->Warn("[终端连接被终端断开][TSId:"SFMT64U"][CAId:"SFMT64U"]", tid, cid);
+
     term_conn->SetDirty();
-    //todo:: delete ???
-    //delete term_conn;
 
     total_connections_--;
 }

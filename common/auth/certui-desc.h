@@ -24,11 +24,11 @@ using ::std::map;
 
 struct CertUiDescriptor : public DescBase
 {
+    //user_info_ -> string<2> type.
     string user_info_;
 
     CertUiDescriptor(map<string, string> const& ui_kv_pair)
-    {
-        
+    {     
         map<string, string>::const_iterator it = ui_kv_pair.begin();
         for (/* without init */; it != ui_kv_pair.end(); ++it) {
             user_info_ += it->first + "=" + it->second;
@@ -36,14 +36,14 @@ struct CertUiDescriptor : public DescBase
         }
 
         tag_ = TagCertUserInfoDesc;
-        length_ = user_info_.length();
+        length_ = user_info_.length() + String2ExtraLen;
     }
 
     CertUiDescriptor(string const& str)
         : user_info_(str)
     {
         tag_ = TagCertUserInfoDesc;
-        length_ = user_info_.length();
+        length_ = user_info_.length() + String2ExtraLen;
     }
     
 
@@ -51,7 +51,7 @@ struct CertUiDescriptor : public DescBase
     {
         user_info_ = "";
         tag_ = TagCertUserInfoDesc;
-        length_ = user_info_.length();
+        length_ = user_info_.length() + String2ExtraLen;
     }
 
     virtual ByteStream getStream()  

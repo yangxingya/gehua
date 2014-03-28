@@ -70,7 +70,7 @@ void TermRequestProcessSvr::AddSvcApplyWork( weak_ptr<TermSession> ts, PtSvcAppl
         TermSvcApplyWork *svcapply_work = NULL;
         if ( pkg->svc_self_apply_desc_.valid_ && (sp_ts->Id() == pkg->svc_self_apply_desc_.session_id_) )
         {
-            svcapply_work = new TermSvcApplyWork(sp_ts->term_conn_, pkg, sp_ts);
+            svcapply_work = new TermSvcApplyWork(pkg, sp_ts);
         }
         else if ( pkg->svc_cross_apply_desc_.valid_ && (sp_ts->Id() == pkg->svc_cross_apply_desc_.init_session_id_) )
         {
@@ -78,7 +78,7 @@ void TermRequestProcessSvr::AddSvcApplyWork( weak_ptr<TermSession> ts, PtSvcAppl
             shared_ptr<TermSession> show_term_session(wp_show_term_session.lock());
             if ( show_term_session != NULL )
             {
-                svcapply_work = new TermSvcApplyWork(sp_ts->term_conn_, pkg, sp_ts, show_term_session);
+                svcapply_work = new TermSvcApplyWork(pkg, sp_ts, show_term_session);
             }
             else
             {
@@ -115,8 +115,14 @@ void TermRequestProcessSvr::AddSvcApplyWork( weak_ptr<TermSession> ts, PtSvcAppl
                                 sp_ts->CAId(), sp_ts->Id(),
                                 response_pkg.Size(),
                                 stringtool::to_hex_string((const char*)response_pkg.GetBuffer(),response_pkg.Size()).c_str());    
-        
-    if ( sp_ts->term_conn_->Write(response_pkg.GetBuffer(), response_pkg.Size()) )
+     
+	bool writed;
+	{
+		MutexLock lock(sp_ts->termconn_mtx_);
+		if (sp_ts->term_conn_)
+			writed = sp_ts->term_conn_->Write(response_pkg.GetBuffer(), response_pkg.Size());
+	}
+    if (writed)
     {
         //TODO:暂时默认发送成功
     }

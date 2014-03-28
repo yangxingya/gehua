@@ -137,6 +137,18 @@ int SvcApplyWork::ParseHttpResponse( ByteStream &response_body, vector<PB_SvcURL
             svc_url.PutHexString(param_map["SvcURL"][i]);
             PB_SvcURLDescriptor desc;
             desc = Descriptor(svc_url);
+
+			/*
+			PB_SvcURLDescriptor svcurldesc;
+			svcurldesc.url_           = desc.apply_url_;
+			svcurldesc.back_url_      = desc.back_url_;
+			svcurldesc.sm_session_id_ = desc.session_id_;
+			svcurldesc.session_id_    = desc.session_id_;
+			*/
+
+			psm_context->logger_.Info("%s smhttp响应包：终端会话id: "SFMT64U"SM会话id：%s\n\tURL=%s  \n\tBackURL=%s", 
+				log_header_, desc.session_id_, desc.sm_session_id_.c_str(), desc.url_.c_str(), desc.back_url_.c_str());
+
             svc_url_desc_list.push_back(desc);
         }
 

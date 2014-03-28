@@ -90,6 +90,8 @@ void TermBasicFuncSvr::AddStatusPChangeNotifyWork( weak_ptr<TermSession> ts, PtS
 void TermBasicFuncSvr::NotifyAllTerminalStatusPChanged( CASession *ca_session, uint64_t ignore_session_id )
 {
     PtStatusNotifyRequest notify_request;
+
+	MutexLock lock(ca_session->termsession_mtx_);
     map<uint64_t, shared_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
     for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
     {
@@ -144,7 +146,9 @@ void TRequestWork_KeyMapping::Func_Begin( Work *work )
                                     stringtool::to_hex_string((const char*)responed_pkg.GetBuffer(), responed_pkg.Size()).c_str());
 
 
-        iter->second->term_conn_->Write(responed_pkg.GetBuffer(), responed_pkg.Size());
+		MutexLock lock(iter->second->termconn_mtx_);
+		if (iter->second->term_conn_)
+			iter->second->term_conn_->Write(responed_pkg.GetBuffer(), responed_pkg.Size());
     }
 
     TRequestWork_StatusQuery::Func_End(work);
@@ -192,7 +196,13 @@ void TNotifyWork_SvcSwitch::Func_Begin( Work *work )
                                 bs.Size(),
                                 stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
 
-    if ( session_info->term_conn_->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
+	bool writed = false;
+	{
+		MutexLock lock(session_info->termconn_mtx_);
+		if (session_info->term_conn_)
+			writed = session_info->term_conn_->Write((unsigned char*)bs.GetBuffer(), bs.Size());
+	}
+    if (writed)
     {
         // add responed process work.
 //         svcswitch_work->work_func_   = TNotifyWork_StatusNotify::Func_ProcessResponed; 
@@ -256,7 +266,13 @@ void TNotifyWork_StatusNotify::Func_Begin( Work *work )
                                 bs.Size(),
                                 stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
 
-    if ( session_info->term_conn_->Write((unsigned char*)bs.GetBuffer(), bs.Size()) )
+	bool writed = false;
+	{
+		MutexLock lock(session_info->termconn_mtx_);
+		if (session_info->term_conn_)
+			writed = session_info->term_conn_->Write((unsigned char*)bs.GetBuffer(), bs.Size());
+	}
+    if (writed)
     {
         // and responed process work.
         //         statusnotify_work->work_func_   = TNotifyWork_StatusNotify::Func_ProcessResponed; 

@@ -2,8 +2,8 @@
 #include "casessionmgr.h"
 #include "casession.h"
 
-CASessionMgr::CASessionMgr(Logger &logger, uint32_t timer_span)
-    : logger_(logger), conn_timeout_timer_(logger)
+CASessionMgr::CASessionMgr(Logger &logger, PSMContext *psm_ctx, uint32_t timer_span)
+    : logger_(logger), conn_timeout_timer_(logger, psm_ctx)
 {
     conn_timeout_timer_.Activate(timer_span);
 }
@@ -42,6 +42,7 @@ void CASessionMgr::Attach(CASession *cs)
 {
     ca_session_map_[cs->Id()] = cs;
 
+	MutexLock lock(cs->termsession_mtx_);
     map<uint64_t, shared_ptr<TermSession> >::iterator 
         it = cs->terminal_session_map_.begin();
 
@@ -60,6 +61,8 @@ CASession* CASessionMgr::Detach(caid_t caid)
         cs = it->second;
    
         map<uint64_t, CASession*>::iterator cit;
+
+		MutexLock lock(cs->termsession_mtx_);
 
         map<uint64_t, shared_ptr<TermSession> >::iterator 
             tit = it->second->terminal_session_map_.begin();
@@ -88,4 +91,14 @@ void CASessionMgr::DetachTermSessionInfo( uint64_t ts_id )
     {
         terminal_id_ca_session_map_.erase(it);
     }
+}
+
+void CASessionMgr::AddToTimer(weak_ptr<TermSession> ts)
+{
+	conn_timeout_timer_.Add(ts);
+}
+
+void CASessionMgr::RemoveFromTimer(uint64_t ts_id)
+{
+	conn_timeout_timer_.Remove(ts_id);
 }

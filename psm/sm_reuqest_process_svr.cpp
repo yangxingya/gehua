@@ -230,6 +230,8 @@ int SMRequestProcessSvr::UpdateTermParam( PbSvcPChangeRequest *pkg )
     }
 
     CASession *ca_session = term_session->ca_session_;
+
+	MutexLock lock(ca_session->termsession_mtx_);
     map<uint64_t, shared_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
     for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
     {

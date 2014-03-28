@@ -12,6 +12,7 @@
 struct WorkPool 
 {
     WorkPool(Logger& logger, int sz = 1);
+	~WorkPool();
 
     bool Start();
     void Stop();
@@ -35,6 +36,15 @@ WorkPool::WorkPool(Logger& logger, int sz)
         wq_array_.push_back(new WorkQueue);
         delay_wq_array_.push_back(new WorkQueue);
     }
+}
+
+inline 
+WorkPool::~WorkPool()
+{
+	for (size_t i = 0; i < wq_array_.size(); ++i) {
+		delete wq_array_[i];
+		delete delay_wq_array_[i];
+	}
 }
 
 inline 
@@ -86,7 +96,8 @@ inline
 void WorkPool::CancelAllWork()
 {
     for (size_t i = 0; i < wq_array_.size(); ++i) {
-        //
+		wq_array_[i]->Flush();
+		delay_wq_array_[i]->Flush();
     }
 }
 

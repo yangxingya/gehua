@@ -19,8 +19,8 @@ struct TermConnection : public AioConnection
     TermConnection(ILogger* logger, TCPConnection* tcp, AioTcpServer* server) 
         : AioConnection(tcp,server)
         , logger_(logger)
-        , create_time_(get_up_time()),last_heartbeat_time_(0) 
-        , timeout_(0), login_(false)
+        , create_time_(get_up_time()),last_heartbeat_time_(get_up_time()) 
+        , timeout_(3 * 60), login_(false)
     {
     }
 
@@ -54,6 +54,9 @@ private:
     bool login_;
     TermConnection(TermConnection const&);
     TermConnection& operator=(TermConnection const&);
+
+	bool reused_termsession(uint64_t ts_id);
+	bool gen_termsession(PtBase *msg);
 };
 
 #endif // !gehua_tcpserver_terminal_connection_h_

@@ -67,11 +67,10 @@ struct PSMContext
         logger_.Info("PSM TerminalServer ip: %s", ip_str_.c_str()); 
 
         int thread_cnt = to_int(wk_thread_cnt);
-        busi_pool_ = new BusinessPool(logger, thread_cnt);
+        busi_pool_ = new BusinessPool(logger, this, thread_cnt);
         
         term_server_->psm_ctx_ = this;
         busi_server_->psm_ctx_ = this;
-        busi_pool_->psm_ctx_   = this;
 
         term_request_process_svr_   = new TermRequestProcessSvr(this);
         term_basic_func_svr_        = new TermBasicFuncSvr(this);

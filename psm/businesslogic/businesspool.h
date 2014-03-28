@@ -23,13 +23,17 @@ using ::std::vector;
 struct BusinessPool
 {
 public:
-    BusinessPool(Logger& logger, int thread_cnt = 1);
+    BusinessPool(Logger& logger, PSMContext *psm_ctx, int thread_cnt = 1);
     void AddWork(Work *wk, caid_t caid);
     void AddDelayedWork(DelayedWork *delay_wk, caid_t caid);
 
     weak_ptr<TermSession> GenTermSession(PtLoginRequest *msg, TermConnection *conn);
     //return the number of terminal session in the same ca sesssion.
     uint32_t DelTermSession(weak_ptr<TermSession> term_session);
+	
+	void AddToTimer(weak_ptr<TermSession> ts);
+	void RemoveFromTimer(weak_ptr<TermSession> ts);
+
     CASession* FindCASessionById(caid_t caid);
     weak_ptr<TermSession> FindTermSessionById(uint64_t term_session_id);
 

@@ -401,7 +401,7 @@ struct ReqGetCert : public ReqBase
 
         userinfo_ = new UserInfo(userinfo_desc_.user_info_);
         if (!userinfo_->valid()) {
-            logger_.Warn("获取证书，解析UserInfoDescriptor中的userinfo失败");
+            logger_.Warn("获取证书，解析UserInfoDescriptor中的userinfo失败:\n\t%s", userinfo_desc_.user_info_.c_str());
             return false;
         }
 

@@ -29,7 +29,7 @@ struct OperatorInfoDescriptor : public DescBase
         tag_ = TagOperatorInfoDesc;
         id_ = id;
         name_ = name;
-        length_ = sizeof(id_) + name_.length() + 1;
+        length_ = sizeof(id_) + name_.length() + String1ExtraLen;
     }
 
     OperatorInfoDescriptor() 
@@ -37,7 +37,7 @@ struct OperatorInfoDescriptor : public DescBase
         tag_ = TagOperatorInfoDesc;
         id_ = 0;
         name_ = "gehua";
-        length_ = sizeof(id_) + name_.length() + 1;
+        length_ = sizeof(id_) + name_.length() + String1ExtraLen;
     }
     
     virtual ByteStream getStream() 

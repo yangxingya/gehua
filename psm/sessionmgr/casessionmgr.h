@@ -12,11 +12,12 @@
 
 using ::std::map;
 
+struct PSMContext;
 struct CASession;
 struct CASessionMgr
 {
 public:
-    CASessionMgr(Logger &logger, uint32_t timer_span = 5 * 60 * 1000);
+    CASessionMgr(Logger &logger, PSMContext *psm_ctx, uint32_t timer_span = 5 * 60 * 1000);
     CASession* FindCASessionById(caid_t caid);
     CASession* FindCASessionByTermSessionId(uint64_t ts_id);
     CASession* Create(caid_t caid);
@@ -26,6 +27,9 @@ public:
 
     CASession* Detach(caid_t caid);
     void DetachTermSessionInfo(uint64_t ts_id);
+
+	void AddToTimer(weak_ptr<TermSession> ts);
+	void RemoveFromTimer(uint64_t ts_id);
 
 private:
     Logger&      logger_;

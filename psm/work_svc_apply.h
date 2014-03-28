@@ -57,7 +57,7 @@ struct SvcApplyWork : public Work
 
     SvcApplyRunStep             run_step_;
     bool                        apply_sucess_;
-    AioConnection               *conn_;
+    //AioConnection               *conn_;
 
     SvcApplyType                apply_type_;
     HTTPAysnRequestInfo         http_request_info_;
@@ -78,8 +78,8 @@ struct SvcApplyWork : public Work
  */
 struct TermSvcApplyWork : public SvcApplyWork
 {
-    TermSvcApplyWork(AioConnection *conn, PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info);
-    TermSvcApplyWork(AioConnection *conn, PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info);
+    TermSvcApplyWork(PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info);
+    TermSvcApplyWork(PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info);
     virtual ~TermSvcApplyWork();
 
     int SendResponed(ByteStream &response_buf);
@@ -99,9 +99,11 @@ public:
  */
 struct SMSvcApplyWork : public SvcApplyWork
 {
-    SMSvcApplyWork(AioConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info);
+	BusiConnection               *conn_;
 
-    SMSvcApplyWork(AioConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info);
+    SMSvcApplyWork(BusiConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info);
+
+    SMSvcApplyWork(BusiConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info);
     virtual ~SMSvcApplyWork();
 
     int SendResponed(unsigned int ret_code);

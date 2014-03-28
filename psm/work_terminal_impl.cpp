@@ -65,7 +65,13 @@ void TRequestWork_Login::Func_Begin( Work *work )
                                 responed_pkg.Size(),
                                 stringtool::to_hex_string((const char*)responed_pkg.GetBuffer(), responed_pkg.Size()).c_str());
 
-    if ( session_info->term_conn_->Write(responed_pkg.GetBuffer(), responed_pkg.Size()) )
+	bool writed = false;
+	{
+		MutexLock lock(session_info->termconn_mtx_);
+		if (session_info->term_conn_)
+			writed = session_info->term_conn_->Write(responed_pkg.GetBuffer(), responed_pkg.Size());
+	}
+    if (writed)
     {
         // notify relate terminal status changed.
         psm_context->logger_.Trace("%s 向终端发送应答成功, 开始创建通知关联终端状态变更通知工作任务...", login_work->log_header_);
@@ -115,20 +121,12 @@ void TRequestWork_Logout::Func_Begin( Work *work )
     logout_work->run_step_ = TRequestWork_Logout::Logout_ReleaseSession;
 
     CASession       *ca_session  = session_info->ca_session_;
-    TermConnection  *term_conn   = session_info->term_conn_;
+    //TermConnection  *term_conn   = session_info->term_conn_;
 
     caid_t    caid_id         = session_info->CAId();
     uint64_t  term_session_id = session_info->Id();
 
     if ( caid_id ) {//??????
-    }
-
-    psm_context->logger_.Trace("%s 删除会话，并通知其他关联终端状态变更...", logout_work->log_header_);
-
-    if ( psm_context->busi_pool_->DelTermSession(logout_work->session_info_) > 0 )
-    {
-        // notify other terminal status changed.
-        psm_context->term_basic_func_svr_->NotifyAllTerminalStatusPChanged(ca_session, term_session_id);
     }
 
     //generate response package, and send responed.
@@ -148,19 +146,35 @@ void TRequestWork_Logout::Func_Begin( Work *work )
                                 responed_pkg.Size(),
                                 stringtool::to_hex_string((const char*)responed_pkg.GetBuffer(), responed_pkg.Size()).c_str());
 
-    if ( !term_conn->Write(responed_pkg.GetBuffer(), responed_pkg.Size()) )
+	bool writed;
+	{
+		MutexLock lock(session_info->termconn_mtx_);
+		writed = session_info->term_conn_->Write(responed_pkg.GetBuffer(), responed_pkg.Size());
+	}
+    if (!writed)
     {
         // TODO:暂时默认发送成功
     }
 
-    //关闭连接，删除会话。
-    shared_ptr<TermSession> sp_ts(term_conn->term_session_.lock());
-    if (sp_ts) {
-        psm_context->busi_pool_->DelTermSession(sp_ts);
-    }
-    term_conn->SetDirty();
-    //todo:: delte ???
-    //delete term_conn;
+	psm_context->logger_.Trace("%s 删除会话，并通知其他关联终端状态变更...", logout_work->log_header_);
+
+	psm_context->busi_pool_->RemoveFromTimer(session_info);
+	if ( psm_context->busi_pool_->DelTermSession(session_info) > 0 )
+	{
+		// notify other terminal status changed.
+		psm_context->term_basic_func_svr_->NotifyAllTerminalStatusPChanged(ca_session, term_session_id);
+	}
+
+    //删除会话，关闭连接。
+	TermConnection *tmpconn;
+	{
+		MutexLock lock(session_info->termconn_mtx_);
+		tmpconn = session_info->term_conn_;
+		session_info->term_conn_ = NULL;
+	}
+	
+    tmpconn->SetDirty();
+	delete tmpconn;
 
     TRequestWork_Logout::Func_End(work);
 }
@@ -195,7 +209,12 @@ void TRequestWork_Heartbeat::Func_Begin( Work *work )
         return;
     }
 
-    session_info->term_conn_->last_heartbeat_time_ = timetool::get_up_time();
+	double curr_time = timetool::get_up_time();
+	{
+		MutexLock lock(session_info->termconn_mtx_);
+		if (session_info->term_conn_)
+			session_info->term_conn_->last_heartbeat_time_ = curr_time;
+	}
 
     //generate response package, and send responed.
     heartbeat_work->run_step_ = TRequestWork_Heartbeat::Heartbeat_SendResponse;
@@ -203,7 +222,7 @@ void TRequestWork_Heartbeat::Func_Begin( Work *work )
     PtHeartbeatResponse heartbeat_response;
     if ( heartbeat_work->pkg_->test_data_desc_.valid_ )
     {
-        PT_TestDataDescriptor test_data_desc(heartbeat_work->pkg_->test_data_desc_.request_str_, to_string("%.3lf",session_info->term_conn_->last_heartbeat_time_));
+        PT_TestDataDescriptor test_data_desc(heartbeat_work->pkg_->test_data_desc_.request_str_, to_string("%.3lf",curr_time));
         heartbeat_response.Add(test_data_desc);
     }
 
@@ -214,7 +233,14 @@ void TRequestWork_Heartbeat::Func_Begin( Work *work )
                                 responed_pkg.Size(),
                                 stringtool::to_hex_string((const char*)responed_pkg.GetBuffer(), responed_pkg.Size()).c_str());
 
-    if ( !session_info->term_conn_->Write((unsigned char*)responed_pkg.GetBuffer(), responed_pkg.GetWritePtr()) )
+	bool writed = false;
+	{
+		MutexLock lock(session_info->termconn_mtx_);
+		if (session_info->term_conn_)
+			writed = session_info->term_conn_->Write((unsigned char*)responed_pkg.GetBuffer(), responed_pkg.GetWritePtr());
+	}
+
+    if (!writed)
     {
         // TODO:暂时默认发送成功
     }
@@ -259,11 +285,14 @@ void TRequestWork_StatusQuery::Func_Begin( Work *work )
     CASession *ca_session = session_info->ca_session_;
 
     PtStatusQueryResponse notifyquery_response;
-    map<uint64_t, shared_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
-    for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
-    {
-        notifyquery_response.Add(iter->second->terminal_info_desc_);
-    }
+	{
+		MutexLock lock(ca_session->termsession_mtx_);
+		map<uint64_t, shared_ptr<TermSession> >::iterator iter = ca_session->terminal_session_map_.begin();
+		for ( ; iter != ca_session->terminal_session_map_.end(); iter++ )
+		{
+			notifyquery_response.Add(iter->second->terminal_info_desc_);
+		}
+	}
     if ( statusquery_work->pkg_->test_data_desc_.valid_ )
     {
         PT_TestDataDescriptor test_data_desc(statusquery_work->pkg_->test_data_desc_.request_str_, to_string("%.3lf",get_up_time()));
@@ -277,7 +306,13 @@ void TRequestWork_StatusQuery::Func_Begin( Work *work )
                                 response_pkg.Size(),
                                 stringtool::to_hex_string((const char*)response_pkg.GetBuffer(), response_pkg.Size()).c_str());
 
-    if ( !session_info->term_conn_->Write((unsigned char*)response_pkg.GetBuffer(), response_pkg.Size()) )
+	bool writed = false;
+	{
+		MutexLock lock(session_info->termconn_mtx_);
+		if (session_info->term_conn_)
+			writed = session_info->term_conn_->Write((unsigned char*)response_pkg.GetBuffer(), response_pkg.Size());
+	}
+    if (!writed)
     {
         //TODO:暂时默认发送成功
     }
@@ -340,9 +375,15 @@ void TRequestWork_GetSvcGroup::Func_Begin( Work *work )
                                 getsvcgroup_work->log_header_,
                                 response_pkg.Size(),
                                 stringtool::to_hex_string((const char*)response_pkg.GetBuffer(), response_pkg.Size()).c_str());
+	
+	bool writed = false;
+	{
+		MutexLock lock(session_info->termconn_mtx_);
+		if (session_info->term_conn_)
+			writed = session_info->term_conn_->Write((unsigned char*)response_pkg.GetBuffer(), response_pkg.Size());
+	}
 
-
-    if ( !session_info->term_conn_->Write((unsigned char*)response_pkg.GetBuffer(), response_pkg.Size()) )
+    if (!writed)
     {
         //TODO:暂时默认发送成功
     }

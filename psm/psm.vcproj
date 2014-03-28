@@ -356,6 +356,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\sessionmgr\timeouttimer.cpp"
+				>
+			</File>
+			<File
 				RelativePath=".\sessionmgr\timeouttimer.h"
 				>
 			</File>

@@ -34,17 +34,18 @@ public:
     bool valid() const { return valid_; }
 public:
 
-    CASession       *ca_session_;
-    TermConnection  *term_conn_;
+    CASession                 *ca_session_;
+	Mutex                     termconn_mtx_;
+    TermConnection            *term_conn_;
 
-    BusinessType            curr_busi_type_;
-    BusinessType            last_busi_type_;
+    BusinessType              curr_busi_type_;
+    BusinessType              last_busi_type_;
 
-    string                  last_local_svc_url_;
-    PB_SvcURLDescriptor     curr_svc_url_desc_;
+    string                    last_local_svc_url_;
+    PB_SvcURLDescriptor       curr_svc_url_desc_;
 
-    ServiceGroup    service_grp_;
-    UserInfo        user_info_;
+    ServiceGroup              service_grp_;
+    UserInfo                  user_info_;
 
     PT_OdcLibDescriptor       odclib_desc_;        
     PT_UserInfoDescriptor     user_info_desc_;     
