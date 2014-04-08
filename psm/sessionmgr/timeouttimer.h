@@ -5,14 +5,11 @@
 #if !defined gehua_timeouttimer_h_
 #define gehua_timeouttimer_h_
 
-#include <memory>
 #include <cpplib/timer.h>
 #include <cpplib/mutex.h>
 #include <cpplib/mutexlock.h>
+#include "../../common/portable.h"
 #include "termsession.h"
-
-using ::std::tr1::weak_ptr;
-using ::std::tr1::shared_ptr;
 
 const int kDefaultTimeout = 3 * 60;
 

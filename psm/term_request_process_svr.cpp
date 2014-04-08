@@ -32,6 +32,12 @@ void TermRequestProcessSvr::AddLoginRequestWork( weak_ptr<TermSession> ts, PtLog
     psm_context_->busi_pool_->AddWork(work, sp_ts->CAId());
 }
 
+void TermRequestProcessSvr::AddLoginRequestWork( caid_t caid, PtLoginRequest *pkg )
+{
+    TRequestWork_Login *work = new TRequestWork_Login(pkg, caid, psm_context_);
+    psm_context_->busi_pool_->AddWork(work, caid);
+}
+
 void TermRequestProcessSvr::AddLogoutRequestWork( weak_ptr<TermSession> ts, PtLogoutRequest *pkg )
 {
     shared_ptr<TermSession> sp_ts(ts.lock());
@@ -82,7 +88,7 @@ void TermRequestProcessSvr::AddSvcApplyWork( weak_ptr<TermSession> ts, PtSvcAppl
             }
             else
             {
-                psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=" SFMT64U "] 申请呈现端的会话[SID=" SFMT64U "]不存在。",  
+                psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=0x" SFMT64X "] 申请呈现端的会话[SID=0x" SFMT64X "]不存在。",  
                                             sp_ts->CAId(), sp_ts->Id(),
                                             pkg->svc_cross_apply_desc_.show_session_id_);    
 
@@ -92,8 +98,12 @@ void TermRequestProcessSvr::AddSvcApplyWork( weak_ptr<TermSession> ts, PtSvcAppl
         }
         else
         {
-            psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=" SFMT64U "] 申请参数不合法。",  
-                                        sp_ts->CAId(), sp_ts->Id());    
+			uint64_t pkt_sid = pkg->svc_self_apply_desc_.session_id_;
+			if (pkg->svc_cross_apply_desc_.valid_)
+				pkt_sid = pkg->svc_cross_apply_desc_.show_session_id_;
+
+            psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=0x" SFMT64X "] 申请参数不合法,包解析SID=0x"SFMT64X"",  
+                                        sp_ts->CAId(), sp_ts->Id(), pkt_sid);    
 
             ret_code = PT_RC_MSG_FORMAT_ERROR;
             break;
@@ -111,12 +121,12 @@ void TermRequestProcessSvr::AddSvcApplyWork( weak_ptr<TermSession> ts, PtSvcAppl
     PtSvcApplyResponse svcapply_response(ret_code, 0);
     ByteStream response_pkg = svcapply_response.Serialize();
 
-    psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=" SFMT64U "] 处理业务申请请求失败，向终端发送失败应答。长度：%d  内容：\n%s",  
+    psm_context_->logger_.Warn("[终端业务申请请求][CAID=" SFMT64U "][SID=" SFMT64X "] 处理业务申请请求失败，向终端发送失败应答。长度：%d  内容：\n%s",  
                                 sp_ts->CAId(), sp_ts->Id(),
                                 response_pkg.Size(),
                                 stringtool::to_hex_string((const char*)response_pkg.GetBuffer(),response_pkg.Size()).c_str());    
      
-	bool writed;
+	bool writed = false;
 	{
 		MutexLock lock(sp_ts->termconn_mtx_);
 		if (sp_ts->term_conn_)

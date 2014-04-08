@@ -20,7 +20,7 @@ void TermBasicFuncSvr::AddKeyTransmitWork( weak_ptr<TermSession> ts, PtKeyMappin
 {
     shared_ptr<TermSession> sp_ts(ts.lock());
     if (!sp_ts) {
-        psm_context_->logger_.Warn("[键值映射请求]******终端会话不存在******");
+        psm_context_->logger_.Warn("[Key Mapping Transfer]******终端会话不存在******");
         return;
     }
 
@@ -139,7 +139,7 @@ void TRequestWork_KeyMapping::Func_Begin( Work *work )
 
         ByteStream responed_pkg = keymapping_response.Serialize();
 
-        psm_context->logger_.Trace("[键值映射请求][CAID=" SFMT64U "][SID=" SFMT64U "] 向指定终端[SID=" SFMT64U "]转发键值映射请求。 长度：%d  内容：\n%s", 
+        psm_context->logger_.Trace("[Key Mapping Response][CAID=" SFMT64U "][SID=" SFMT64X "] 向指定终端[SID=" SFMT64X "]转发键值映射请求。 长度：%d  内容：\n%s", 
                                     kmap_ts->CAId(), kmap_ts->Id(),
                                     iter->second->Id(),
                                     responed_pkg.Size(),
@@ -191,7 +191,7 @@ void TNotifyWork_SvcSwitch::Func_Begin( Work *work )
 
     ByteStream bs = svcswitch_work->pkg_->Serialize();
 
-    psm_context->logger_.Trace("[业务切换通知][CAID=" SFMT64U "][SID=" SFMT64U "] 向终端发送业务切换通知。 长度：%d  内容：\n%s", 
+    psm_context->logger_.Trace("[业务切换通知][CAID=" SFMT64U "][SID=" SFMT64X "] 向终端发送业务切换通知。 长度：%d  内容：\n%s", 
                                 session_info->CAId(), session_info->Id(),
                                 bs.Size(),
                                 stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());
@@ -261,7 +261,7 @@ void TNotifyWork_StatusNotify::Func_Begin( Work *work )
 
     ByteStream bs = statusnotify_work->pkg_->Serialize();
 
-    psm_context->logger_.Trace("[状态变更通知][CAID=" SFMT64U "][SID=" SFMT64U "] 向终端发送状态变更通知。 长度：%d  内容：\n%s", 
+    psm_context->logger_.Trace("[状态变更通知][CAID=" SFMT64U "][SID=" SFMT64X "] 向终端发送状态变更通知。 长度：%d  内容：\n%s", 
                                 session_info->CAId(), session_info->Id(),
                                 bs.Size(),
                                 stringtool::to_hex_string((const char*)bs.GetBuffer(), bs.Size()).c_str());

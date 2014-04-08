@@ -163,7 +163,9 @@ public:
 
         UserCert *cert = cit->second;
         
-        return const_cast<ByteStream&>(certbs) == cert->getStream();
+	ByteStream cert_bs = cert->getStream();
+	ByteStream &rhs_cert_bs = const_cast<ByteStream&>(certbs);
+        return cert_bs == rhs_cert_bs;
     }
 
     bool ValidCert(UserInfo const& userinfo, UserCert const& usercert) const

@@ -6,20 +6,12 @@
 #define gehua_sessionmgr_terminal_session_h_
 
 #include <cpplib/logger.h>
-#include <protocol/protocol_v2_common.h>
-#include <protocol/protocol_v2_general.h>
-#include <protocol/protocol_v2_cipher.h>
-#include <protocol/protocol_v2_pt_common.h>
 #include <protocol/protocol_v2_pt_descriptor.h>
-#include <protocol/protocol_v2_pt.h>
-#include <protocol/protocol_v2_pt_message.h>
-#include <protocol/protocol_v2_pb_common.h>
 #include <protocol/protocol_v2_pb_descriptor.h>
-#include <protocol/protocol_v2_pb.h>
-#include <protocol/protocol_v2_pb_message.h>
 #include "../../common/widget.h"
-#include "../bs-comm-def.h"
 #include "../../common/auth/desc-common.h"
+#include "../bs-comm-def.h"
+#include "../errcode.h"
 
 struct UserInfo;
 struct TermConnection;
@@ -30,7 +22,7 @@ struct BusinessStatusInfo;
 struct TermSession
 {
 public:
-    TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tconn);
+    TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tconn, LoginError *error);
     bool valid() const { return valid_; }
 public:
 

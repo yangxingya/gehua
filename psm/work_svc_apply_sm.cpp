@@ -21,7 +21,7 @@ SMSvcApplyWork::SMSvcApplyWork( BusiConnection *conn, PbSvcApplyRequest *pkg, we
     if (!sp_session_info)
         _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
     else 
-        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=0x" SFMT64X "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
 SMSvcApplyWork::SMSvcApplyWork( BusiConnection *conn, PbSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info )
@@ -43,7 +43,7 @@ SMSvcApplyWork::SMSvcApplyWork( BusiConnection *conn, PbSvcApplyRequest *pkg, we
     if (!sp_session_info)
         _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
     else 
-        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=0x" SFMT64X "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
 SMSvcApplyWork::~SMSvcApplyWork()

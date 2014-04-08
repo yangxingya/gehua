@@ -13,33 +13,55 @@ AioConnection* TermServer::OnConnected( TCPConnection* tcp )
     //set psm context.
     new_conn->psm_ctx_ = psm_ctx_;
 
-    if (new_conn) {
+    LOCK_BEGIN(lock,mt_);
+    if ( new_conn ) {
         total_connections_ ++;
         new_connections_ ++;
-    } else {
+    }
+    else {
         reject_connections_++;
     }
+    LOCK_END();
+
+    LOCK_BEGIN(lockd,connection_mt_);
+    all_conn_map_[new_conn] = new_conn;
+    LOCK_END();
+
     return (AioConnection*)new_conn;
 }
 
 void TermServer::OnDisconnected(AioConnection* conn)
 {
-    conn->SetDirty();
-    disconnections_++;
-    // delete connection......
-    TermConnection *term_conn = (TermConnection*)conn;
+    uint64_t tid = 0;
+    caid_t   cid = 0;
 
-	uint64_t tid = 0;
-	caid_t   cid = 0;
+    TermConnection *term_conn = (TermConnection*)conn;
     shared_ptr<TermSession> sp_ts(term_conn->term_session_.lock());
     if (sp_ts) {
-		tid = sp_ts->Id();
-		cid = sp_ts->CAId();
+        tid = sp_ts->Id();
+        cid = sp_ts->CAId();
+        MutexLock lock(sp_ts->termconn_mtx_);
+        sp_ts->term_conn_ = NULL;
     }
 
-	logger_->Warn("[终端连接被终端断开][TSId:"SFMT64U"][CAId:"SFMT64U"]", tid, cid);
+    logger_->Warn("[Terminal Disconnected][TSId:0x"SFMT64X"][CAId:"SFMT64U"]", tid, cid);
 
-    term_conn->SetDirty();
+    conn->SetDirty();
 
+    LOCK_BEGIN(lock,mt_);
+    disconnections_++;
     total_connections_--;
+    LOCK_END();
+
+
+
+    LOCK_BEGIN(lock2,connection_mt_);
+
+    if ( term_conn ) {
+        disconnect_list_.push_back(term_conn);
+    }
+    else {
+        LOG_ERROR("disconnect connection isn't type of TermServerConnection");
+    }
+    LOCK_END();
 }

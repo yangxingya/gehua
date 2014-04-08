@@ -6,12 +6,9 @@
 #if !defined gehua_sessionmgr_ca_session_h_
 #define gehua_sessionmgr_ca_session_h_
 
-#include <memory>
 #include <cpplib/cpplibbase.h>
 #include "../../common/widget.h"
-
-using ::std::tr1::weak_ptr;
-using ::std::tr1::shared_ptr;
+#include "../../common/portable.h"
 
 enum CATermMapStatus
 {
@@ -40,6 +37,7 @@ public:
 	}
 
     weak_ptr<TermSession> GetSTBTermSession();
+
 
 	mutable Mutex termsession_mtx_;
     map<uint64_t, shared_ptr<TermSession> > terminal_session_map_;

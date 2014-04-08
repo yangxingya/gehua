@@ -10,7 +10,13 @@
 #include <vector>
 #include <map>
 #include <fstream>
-#include <memory>
+#if defined _MSC_VER
+# include <memory>
+#else
+# if defined __GNUC__
+#  include <tr1/memory>
+# endif
+#endif
 #include <cpplib/logger.h>
 
 using ::std::string;
@@ -18,7 +24,11 @@ using ::std::vector;
 using ::std::map;
 using ::std::ifstream;
 using ::std::ios;
+#if (defined _MSC_VER) && (_MSC_VER == 1500)
 using ::std::tr1::shared_ptr;
+#else
+using ::std::shared_ptr;
+#endif
 
 enum ItemType 
 {
@@ -173,7 +183,7 @@ struct Config
 
             if (!read_group(ifs, &gp)) {
                 valid_ = false;
-                logger_.Error("配置文件读取组%s失败", item->value);
+                logger_.Error("配置文件读取组%s失败", item->value.c_str());
                 break;
             }
             

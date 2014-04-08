@@ -9,6 +9,7 @@
 #include "../../common/widget.h"
 #include "../sessionmgr/casession.h"
 #include "../sessionmgr/casessionmgr.h"
+#include "../errcode.h"
 #include "workpool.h"
 
 struct CASession;
@@ -27,7 +28,7 @@ public:
     void AddWork(Work *wk, caid_t caid);
     void AddDelayedWork(DelayedWork *delay_wk, caid_t caid);
 
-    weak_ptr<TermSession> GenTermSession(PtLoginRequest *msg, TermConnection *conn);
+    weak_ptr<TermSession> GenTermSession(PtLoginRequest *msg, TermConnection *conn, LoginError *error);
     //return the number of terminal session in the same ca sesssion.
     uint32_t DelTermSession(weak_ptr<TermSession> term_session);
 	
@@ -36,6 +37,8 @@ public:
 
     CASession* FindCASessionById(caid_t caid);
     weak_ptr<TermSession> FindTermSessionById(uint64_t term_session_id);
+
+    weak_ptr<TermSession> GetSTBTermSession(caid_t caid);
 
     bool Start();
     void Stop();

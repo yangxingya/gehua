@@ -10,6 +10,8 @@ CASessionMgr::CASessionMgr(Logger &logger, PSMContext *psm_ctx, uint32_t timer_s
 
 CASession* CASessionMgr::FindCASessionById(caid_t caid)
 {
+    MutexLock lock(ca_session_mtx_);
+
     map<caid_t, CASession*>::iterator 
         it = ca_session_map_.find(caid);
     if (it != ca_session_map_.end())
@@ -39,8 +41,11 @@ void CASessionMgr::Destory(CASession *ca_session)
 }
 
 void CASessionMgr::Attach(CASession *cs)
-{
-    ca_session_map_[cs->Id()] = cs;
+{ 
+    {
+        MutexLock lock(ca_session_mtx_);
+        ca_session_map_[cs->Id()] = cs;
+    }
 
 	MutexLock lock(cs->termsession_mtx_);
     map<uint64_t, shared_ptr<TermSession> >::iterator 
@@ -54,26 +59,31 @@ void CASessionMgr::Attach(CASession *cs)
 CASession* CASessionMgr::Detach(caid_t caid)
 {
     CASession *cs = NULL;
-    map<caid_t, CASession*>::iterator 
-        it = ca_session_map_.find(caid);
-    if (it != ca_session_map_.end()) {
 
-        cs = it->second;
-   
+    {
+        MutexLock lock(ca_session_mtx_);
+        map<caid_t, CASession*>::iterator 
+            it = ca_session_map_.find(caid);
+        if (it != ca_session_map_.end()) {
+            cs = it->second;
+            ca_session_map_.erase(it);
+        }
+    }
+
+    if (cs != NULL) {
         map<uint64_t, CASession*>::iterator cit;
 
-		MutexLock lock(cs->termsession_mtx_);
+        MutexLock lock(cs->termsession_mtx_);
 
         map<uint64_t, shared_ptr<TermSession> >::iterator 
-            tit = it->second->terminal_session_map_.begin();
+            tit = cs->terminal_session_map_.begin();
         //删除终端会话id映射CA会话表中的 CA会话的终端会话id列表。
         for (; tit != cs->terminal_session_map_.end(); ++tit) {
             cit = terminal_id_ca_session_map_.find(tit->first);
             if (cit != terminal_id_ca_session_map_.end()) {
-                terminal_id_ca_session_map_.erase(it);
+                terminal_id_ca_session_map_.erase(cit);
             }
         }
-        ca_session_map_.erase(it);
     }
     return cs;
 }

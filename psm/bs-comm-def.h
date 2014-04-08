@@ -55,6 +55,13 @@ enum PCOSClass
     OSMac = 3,
 };
 
+const string kTerminalClassName[] = {"STB", "Phone", "PC"};
+const string kSubClassName[][3] = {
+    { "One Way", "Two Way HD", "Two Way SD"},
+    { "Anroid", "IPhone", "WPhone"},
+    { "Windows", "Linux", "Mac"}
+};
+
 enum Modulation 
 {
     QAM16 = 0x01,
@@ -63,6 +70,9 @@ enum Modulation
     QAM128 = 0x04,
     QAM256 = 0x05,
 };
+
+const string kModulationValue[] = {
+    "QAM16", "QAM32", "QAM64", "QAM128", "QAM256" };
 
 struct ServiceGroup 
 {

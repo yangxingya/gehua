@@ -6,20 +6,26 @@
 static const char rcsid[] = "$Id: threaded.c,v 1.9 2001/11/20 03:23:21 robs Exp $";
 #endif /* not lint */
 
-#include "fcgi/fcgi_config.h"
+#include <fcgi_config.h>
 
 #ifdef HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
-#include "fcgi/fcgiapp.h"
+#include <fcgiapp.h>
+#if defined _WIN32
 #include <process.h>
+#else
+#include <pthread.h>
+#endif
 #include <string>
 #include <vector>
 #include "reqentry.h"
 #include <cpplib/mutex.h>
 #include <cpplib/logger.h>
 #include <cpplib/interruptkeycatcher.h>
+#include <cpplib/thread.h>
+#include "../common/config/config.h"
 
 using ::std::string;
 using ::std::vector;
@@ -40,9 +46,17 @@ static size_t getline(FCGX_Stream *in, vector<string> *out)
     return ret;
 }
 
-static unsigned __stdcall accept_proc(void *para)
+#if defined _WIN32
+#define APICALL __stdcall
+#else
+#define APICALL
+#endif 
+
+static unsigned APICALL accept_proc(void *para)
 {
     int rc;
+
+    string psmaddr = *(string*)para;
 
     //FCGX_Stream     *in  = 0;
     //FCGX_Stream     *out = 0;
@@ -82,7 +96,7 @@ static unsigned __stdcall accept_proc(void *para)
 
             getline(request.in, &content);
 
-            RequestEntry reqety(g_logger, q_str, content);
+            RequestEntry reqety(g_logger, q_str, content, psmaddr);
             if (!reqety.valid())
                 break;
 
@@ -119,6 +133,13 @@ static unsigned __stdcall accept_proc(void *para)
     return 0;
 }
 
+
+static void* pthread_accept_proc(void *argv)
+{
+    accept_proc(argv);
+    return 0;
+}
+
 int main(void)
 { 
     // 初始化日志对象
@@ -134,18 +155,38 @@ int main(void)
     g_logger.SetOutputToFile(true);
     g_logger.SetBackgroundRunning(true);
 
+    Config cfg(g_logger, "psm.config");
+
     FCGX_Init();
 
     g_logger.Info("PSM-HTTP Server Started!");
 
+    string str_auth_thr_cnt = cfg.getOption("perf", "auth_thread_cnt");
+    string term_srv_addr    = cfg.getOption("alladdr", "login_addr");
+
+    int auth_thr_cnt = THREAD_COUNT;
+    g_logger.Info("[PSM-Http Server][option] Accept thread count: %s", str_auth_thr_cnt.c_str());
+    g_logger.Info("[PSM-Http Server][option] Sitch to PSM Term Server Address: %s", term_srv_addr.c_str());
+    if (!str_auth_thr_cnt.empty()) {
+        auth_thr_cnt = atoi(str_auth_thr_cnt.c_str());
+        if (auth_thr_cnt < 0 || auth_thr_cnt > 20000)
+            auth_thr_cnt = THREAD_COUNT;
+    }
+    g_logger.Info("[PSM-Http Server] Accept thread real count: %d", auth_thr_cnt);
+
     for (int i = 1; i < THREAD_COUNT; i++) {
-        _beginthreadex(0, 0, accept_proc, 0, 0, 0);
+#if defined _WIN32
+        _beginthreadex(0, 0, accept_proc, &term_srv_addr, 0, 0);
+#else
+        pthread_t pt;
+        pthread_create(&pt, 0, pthread_accept_proc, &term_srv_addr);
+#endif
     }
 
     // 开始循环等待命令输入并执行
     while (!InterruptKeyCatcher::Occurred())
     {
-        Sleep(5000);
+        Thread::Sleep(5000);
     }
 
     return 0;

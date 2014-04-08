@@ -90,17 +90,31 @@ inline string to_higher(string const& str)
 }
 
 inline size_t split(string const& str, string const& sp, 
-                    vector<string> *out)
+                    vector<string> *out, bool trimed = false)
 {
     string::size_type pos1, pos2;
 
+    string tmp;
     size_t origin_sz = out->size();
+
     pos1 = 0;      
     while ((pos2 = str.find(sp, pos1)) != string::npos) {
-        out->push_back(str.substr(pos1, pos2 - pos1));
+        tmp = str.substr(pos1, pos2 - pos1);
         pos1 = pos2 + sp.length();
+
+        if (trimed && tmp.empty())
+            continue;
+
+        out->push_back(tmp);
     }
-    out->push_back(str.substr(pos1));
+    tmp = str.substr(pos1);
+
+    if (trimed) {
+        if (!tmp.empty())
+            out->push_back(tmp);
+    } else {
+        out->push_back(tmp);
+    }
 
     return (size_t)(out->size() - origin_sz);
 }
@@ -113,7 +127,7 @@ inline size_t split(string const& str, string const& sp1,
 {
     vector<string> strvec;
 
-    split(str, sp1, &strvec);
+    split(str, sp1, &strvec, true);
 
     map<string, string> kv_map;
 
@@ -162,30 +176,12 @@ inline uint64_t to_uint64(string const& str, bool *cast_ok)
 // will get local ip address, if get failure return "0.0.0.0";
 inline string ip_string(string const& ip_and_port) 
 {
-    /*
-    // listen_addr_ is likely "192.168.15.3:13333" format
     string::size_type pos = ip_and_port.find(":");
     string ip = ip_and_port.substr(0, pos);
 
-    struct in_addr addr;
+    if (ip == "*") return "127.0.0.1";
 
-    //get local host real ip address.
-    if (ip == "*" || ip == "127.0.0.1") {
-
-        ip = "0.0.0.0";
-
-        char host[256];
-        gethostname(host, 256);
-        struct hostent* hosts = gethostbyname(host);
-
-        //internet ip.
-        if (hosts->h_addrtype == AF_INET) {
-            addr.s_addr = *(u_long *) hosts->h_addr_list[0];
-            ip = inet_ntoa(addr);
-        }
-    }
-    return ip;*/
-    return "127.0.0.1";//??????
+    return ip;
 }
 
 // convert ip likely "10.12.11.13" to struct in_addr format <ulong> type.

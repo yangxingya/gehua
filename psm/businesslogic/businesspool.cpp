@@ -63,7 +63,7 @@ uint64_t BusinessPool::genTermSessionId(
     tmp.pt.t1 = (uint8_t)((ti & 0x00FF0000) >> 16);
     tmp.pt.t2 = (uint16_t)(ti & 0x0000FFFF);
     tmp.pt.cnt = g_cnt;
-    tmp.pt.ca = (uint16_t)(caid & 0x00000000000000FF);
+    tmp.pt.ca = (uint16_t)(caid & 0x000000000000FFFF);
 
     return tmp.value;
 }
@@ -72,34 +72,34 @@ uint16_t BusinessPool::getCABytesByTermSessionId(uint64_t ts_id)
 {
     // is high 2 bytes or low 2bytes;
 
-    //uint64_t and = 0x000000000000FFFF;
-    //return (uint16_t)(ts_id & and);
+    //uint64_t sfx16 = 0x000000000000FFFFull;
+    //return (uint16_t)(ts_id & sfx16);
 
-    uint64_t and = 0xFFFF000000000000;
-    return (uint16_t)((ts_id & and) >> 48);
+    uint64_t pfx16 = 0xFFFF000000000000ull;
+    return (uint16_t)((ts_id & pfx16) >> 48);
 }
 
 uint16_t BusinessPool::getCAbytesByCAId(caid_t caid)
 {
     // is high 2 bytes or low 2bytes;
 
-    //uint64_t and = 0x000000000000FFFF;
-    //return (uint16_t)(caid & and);
+    //uint64_t sfx16 = 0x000000000000FFFFull;
+    //return (uint16_t)(caid & sfx16);
 
-    uint64_t and = 0xFFFF000000000000;
-    return (uint16_t)((caid & and) >> 48);
+    uint64_t pfx16 = 0x000000000000FFFFull;
+    return (uint16_t)(caid & pfx16);
 }
 
-weak_ptr<TermSession> BusinessPool::GenTermSession(PtLoginRequest *msg, TermConnection *conn)
+weak_ptr<TermSession> BusinessPool::GenTermSession(PtLoginRequest *msg, TermConnection *conn, LoginError *error)
 {
     if (!started_) {
         logger_.Warn("PSM Business Pool have stoped, but generate terminal session"); 
+        *error = LoginWorkPoolNotStarted;
         return weak_ptr<TermSession>();
     }
 
-    shared_ptr<TermSession> sp_ts(new TermSession(logger_, msg, conn));  
+    shared_ptr<TermSession> sp_ts(new TermSession(logger_, msg, conn, error));  
     if (!sp_ts->valid()) {
-        // valid failed.
         logger_.Warn("PSM Business Pool generate terminal session user cert failure");
         return weak_ptr<TermSession>();
     }
@@ -108,7 +108,7 @@ weak_ptr<TermSession> BusinessPool::GenTermSession(PtLoginRequest *msg, TermConn
 
     // generate terminal session id.
     uint64_t ts_id = genTermSessionId(get_up_time(), global_cnt_++, psm_ctx_->ip_addr(), sp_ts->CAId());
-    logger_.Trace("PSM Business Pool generate terminal session id: " SFMT64U, ts_id);
+    logger_.Trace("PSM Business Pool generate terminal session id: 0x" SFMT64X, ts_id);
     sp_ts->Id(ts_id);
 
     CASessionMgr *cs_mgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(sp_ts->Id())];
@@ -139,7 +139,8 @@ weak_ptr<TermSession> BusinessPool::GenTermSession(PtLoginRequest *msg, TermConn
 
     //设置终端描述符
     sp_ts->terminal_info_desc_.session_id_ = sp_ts->Id();
-
+    
+    *error = LoginOK;
     return sp_ts;
 }
 
@@ -169,7 +170,7 @@ uint32_t BusinessPool::DelTermSession(weak_ptr<TermSession> ts)
     }
 
     cs->Remove(sp_ts->Id());
-    logger_.Warn("[删除终端会话][CAId:" SFMT64U "][TSId:" SFMT64U "]", cs->Id(), sp_ts->Id());
+    logger_.Warn("[删除终端会话][CAId:" SFMT64U "][TSId:0x" SFMT64X "]", cs->Id(), sp_ts->Id());
 
     CASessionMgr *cs_mgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(sp_ts->Id())];
     cs_mgr->DetachTermSessionInfo(sp_ts->Id());
@@ -179,7 +180,7 @@ uint32_t BusinessPool::DelTermSession(weak_ptr<TermSession> ts)
     //if no terminal session in ca session,
     // remove ca session.
     if (cs->termCnt() == 0) {
-        logger_.Warn("[删除终端会话][CAId:" SFMT64U "][TSId:" SFMT64U "]，CA会话中无终端，删除CA会话", cs->Id(), sp_ts->Id());
+        logger_.Warn("[删除终端会话][CAId:" SFMT64U "][TSId:0x" SFMT64X "]，CA会话中无终端，删除CA会话", cs->Id(), sp_ts->Id());
         CASessionMgr *cs_mgr = pool_relation_ca_session_mgr_[getIdByTermSessionId(sp_ts->Id())];
         cs_mgr->Detach(cs->Id());
         cs_mgr->Destory(cs);    
@@ -234,4 +235,18 @@ weak_ptr<TermSession> BusinessPool::FindTermSessionById(uint64_t ts_id)
         return weak_ptr<TermSession>();
  
     return it->second;
+}
+
+CASession* BusinessPool::FindCASessionById(caid_t caid)
+{
+    CASessionMgr *csmgr = pool_relation_ca_session_mgr_[getIdByCAId(caid)];
+    return csmgr->FindCASessionById(caid);
+}
+
+weak_ptr<TermSession> BusinessPool::GetSTBTermSession(caid_t caid)
+{
+    CASession *cs = FindCASessionById(caid);
+    if (cs == NULL) return weak_ptr<TermSession>();
+
+    return cs->GetSTBTermSession();
 }

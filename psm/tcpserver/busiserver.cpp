@@ -11,6 +11,18 @@ AioConnection* BusiServer::OnConnected(TCPConnection* tcp)
     //set psm context.
     busi_conn->psm_ctx_ = psm_ctx_;
 
+    LOCK_BEGIN(lock,mt_);
+    if ( busi_conn ) {
+        total_connections_ ++;
+        new_connections_ ++;
+    }
+    else {
+        reject_connections_++;
+    }
+    LOCK_END();
+
+    LOCK_BEGIN(lockd,connection_mt_);
+
     //if not ip, then add ip map.
     map<uint32_t, list<BusiConnection*> >::iterator 
         it = ip_conn_list_map_.find(busi_conn->ClientIp());
@@ -23,23 +35,30 @@ AioConnection* BusiServer::OnConnected(TCPConnection* tcp)
     list<BusiConnection*> &ip_conns = ip_conn_list_map_[busi_conn->ClientIp()];
     ip_conns.push_back(busi_conn);
 
-    if (busi_conn) {
-        total_connections_ ++;
-        new_connections_ ++;
-    } else {
-        reject_connections_++;
-    }
+
+    all_conn_map_[busi_conn] = busi_conn;
+    LOCK_END();
+
     return (AioConnection*)busi_conn;
 }
 
 void BusiServer::OnDisconnected(AioConnection* conn)
 {
     BusiConnection *busi_conn = (BusiConnection*)conn;
-    
+
+    conn->SetDirty();
+
+    LOCK_BEGIN(lock,mt_);
+    disconnections_++;
+    total_connections_--;
+    LOCK_END();
+
+    LOCK_BEGIN(lock2,connection_mt_);
+
     //find ip map conn list.
     map<uint32_t, list<BusiConnection*> >::iterator 
         it = ip_conn_list_map_.find(busi_conn->ClientIp());
-    
+
     //if finded, erase conn.
     if (it != ip_conn_list_map_.end()) {
         list<BusiConnection*> &busi_conns = it->second;
@@ -59,9 +78,13 @@ void BusiServer::OnDisconnected(AioConnection* conn)
         }
     }
 
-    busi_conn->SetDirty();
-    disconnections_++;
-    total_connections_--; 
+    if ( busi_conn ) {
+        disconnect_list_.push_back(busi_conn);
+    }
+    else {
+        LOG_ERROR("disconnect connection isn't type of BusiServerConnection");
+    }
+    LOCK_END();
 }
 
 void BusiServer::OnDataReceived(AioConnection* conn)

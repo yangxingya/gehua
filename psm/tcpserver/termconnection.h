@@ -5,15 +5,14 @@
 #if !defined gehua_tcpserver_terminal_connection_h_
 #define gehua_tcpserver_terminal_connection_h_
 
-#include <memory>
 #include <cpplib/logger.h>
 #include <cpplib/netaio/aiomanager.h>
-
-using ::std::tr1::weak_ptr;
+#include "../../common/portable.h"
 
 struct PSMContext;
 struct TermSession;
 struct PtBase;
+struct PtLoginRequest;
 struct TermConnection : public AioConnection
 {
     TermConnection(ILogger* logger, TCPConnection* tcp, AioTcpServer* server) 
@@ -56,7 +55,8 @@ private:
     TermConnection& operator=(TermConnection const&);
 
 	bool reused_termsession(uint64_t ts_id);
-	bool gen_termsession(PtBase *msg);
+	bool gen_termsession(PtLoginRequest *msg);
+	bool valid_login(PtLoginRequest *msg);
 };
 
 #endif // !gehua_tcpserver_terminal_connection_h_

@@ -18,7 +18,19 @@ TRequestWork_Login::TRequestWork_Login( PtLoginRequest *pkg, weak_ptr<TermSessio
     if (!sp_session_info)
         _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
     else 
-        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=0x" SFMT64X "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
+}
+
+TRequestWork_Login::TRequestWork_Login( PtLoginRequest *pkg, TermConnection *tconn, void *psm_context )
+{
+    pkg_          = pkg;
+    tconn_        = tconn;
+    run_step_     = Login_Begin;
+    work_func_    = TRequestWork_Login::Func_Begin;
+    user_ptr_     = psm_context;
+
+    work_name_    = "终端登录请求";
+    _snprintf(log_header_, 300, "[%s][CAID=no valided][Self_SID=no valided]", work_name_.c_str());
 }
 
 TRequestWork_Login::~TRequestWork_Login()
@@ -40,7 +52,7 @@ TRequestWork_Logout::TRequestWork_Logout( PtLogoutRequest *pkg, weak_ptr<TermSes
     if (!sp_session_info)
         _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
     else 
-        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=0x" SFMT64X "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
 TRequestWork_Logout::~TRequestWork_Logout()
@@ -62,7 +74,7 @@ TRequestWork_Heartbeat::TRequestWork_Heartbeat( PtHeartbeatRequest *pkg, weak_pt
     if (!sp_session_info)
         _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
     else 
-        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=0x" SFMT64X "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
 TRequestWork_Heartbeat::~TRequestWork_Heartbeat()
@@ -84,7 +96,7 @@ TRequestWork_StatusQuery::TRequestWork_StatusQuery( PtStatusQueryRequest *pkg, w
     if (!sp_session_info)
         _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
     else 
-        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=0x" SFMT64X "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
 TRequestWork_StatusQuery::~TRequestWork_StatusQuery()
@@ -106,7 +118,7 @@ TRequestWork_GetSvcGroup::TRequestWork_GetSvcGroup( PtGetSvcGroupRequest *pkg, w
     if (!sp_session_info)
         _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
     else 
-        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=0x" SFMT64X "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
 TRequestWork_GetSvcGroup::~TRequestWork_GetSvcGroup()

@@ -54,11 +54,11 @@ struct PSMContext
 
         term_server_ = new TermServer(term_addr, 4);
         term_server_->AioTcpServer::SetLogger(&logger);
-        term_server_->SetLogger(&logger);
+        term_server_->Timer::SetLogger(&logger);
 
         busi_server_ = new BusiServer(busi_addr, 4);
         busi_server_->AioTcpServer::SetLogger(&logger);
-        busi_server_->SetLogger(&logger);
+        busi_server_->Timer::SetLogger(&logger);
 
         //get local tcp server ip address.
         ip_str_  = term_server_->ip_string();

@@ -32,6 +32,8 @@ void CASession::Remove(uint64_t ts_id)
 
 weak_ptr<TermSession> CASession::GetSTBTermSession()
 {
+    MutexLock lock(termsession_mtx_);
+
     map<uint64_t, shared_ptr<TermSession> >::iterator it = terminal_session_map_.begin();
 
     for ( ; it != terminal_session_map_.end(); it++ )

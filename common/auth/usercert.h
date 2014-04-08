@@ -39,28 +39,31 @@ private:
     Logger &logger_;
 public:
     UserCert(Logger &logger, uint64_t certid, string const& userinfo,
-            uint32_t operid, string const& opername) 
-        : logger_(logger)
-        , magic(kMagic) 
-        , certid_desc_(certid)
+            uint32_t operid, string const& opername)
+      	: certid_desc_(certid)
         , certui_desc_(userinfo)
         , opinfo_desc_(operid, opername)
         , pubkey_desc_()
         , exptime_desc_()
         , sign_desc_()
+        , magic(kMagic) 
+	, dlen(0)
+      	, logger_(logger)
     {
         dlen = certid_desc_.length() + certui_desc_.length() + opinfo_desc_.length() +
             pubkey_desc_.length() + exptime_desc_.length() + sign_desc_.length();
     }
 
     UserCert(Logger &logger, ByteStream &usercert, bool &valid) 
-        : logger_(logger)
-        , certid_desc_()
+       	: certid_desc_()
         , certui_desc_()
         , opinfo_desc_()
         , pubkey_desc_()
         , exptime_desc_()
         , sign_desc_()
+	, magic(0)
+	, dlen(0)
+	, logger_(logger)
     {
         uint8_t tag;
         uint16_t len;

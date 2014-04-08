@@ -20,9 +20,10 @@ const string kReqStr = "req";
 struct RequestEntry 
 {
     string ca_id;
+    string psm_addr;
 
-    RequestEntry(Logger &logger, string const& query_str, vector<string> const& content)
-        : logger_(logger), valid_(false), request_(0)
+    RequestEntry(Logger &logger, string const& query_str, vector<string> const& content, string const& psmaddr)
+        : ca_id(), psm_addr(psmaddr), valid_(false), request_(NULL), logger_(logger)
     {
         //query string like "key1=value1&key2=value2...
         map<string, string> kv_pair;
@@ -62,7 +63,7 @@ struct RequestEntry
         case RTGetEntryAddr:
             {
                 ReqGetEntryAddr *req = new ReqGetEntryAddr(logger_, content);
-                req->SetPSMAddr("192.168.17.163:20002");
+                req->SetPSMAddr(psm_addr);
                 request_ = req;
             }
             break;
@@ -118,6 +119,7 @@ struct RequestEntry
             return false;
         case RTChallenge:
         case RTGetCert:
+	case RTUnknown:
             return true;
         }
 

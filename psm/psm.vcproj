@@ -254,6 +254,10 @@
 				>
 			</File>
 			<File
+				RelativePath=".\errcode.h"
+				>
+			</File>
+			<File
 				RelativePath=".\http_request_processor.h"
 				>
 			</File>

@@ -49,8 +49,15 @@ void TimeOutTimer::OnTimer()
 			}
 			if ((int)(curr - last) > timeout) {
 				//超时处理...添加到工作队列里面？
-				logger_.Warn("[超时计时器]删除超时的终端会话，会话id: "SFMT64U"CAId: "SFMT64U, sp_it->Id(), sp_it->CAId());
-				psm_ctx_->busi_pool_->DelTermSession(sp_it);
+				logger_.Warn("[超时计时器]删除超时的终端会话，会话id: 0x"SFMT64X"CAId: "SFMT64U, sp_it->Id(), sp_it->CAId());
+				CASession *ca_session = sp_it->ca_session_;
+				if (psm_ctx_->busi_pool_->DelTermSession(sp_it) > 0) {
+					psm_ctx_->term_basic_func_svr_->NotifyAllTerminalStatusPChanged(ca_session, sp_it->Id());
+				}
+                MutexLock lock(sp_it->termconn_mtx_);
+				if (sp_it->term_conn_) {
+                    sp_it->term_conn_->SetDirty();
+                }
 				termsession_list_.erase(it++);
 			} else {
 				it++;

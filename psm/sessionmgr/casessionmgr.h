@@ -35,6 +35,7 @@ private:
     Logger&      logger_;
     TimeOutTimer conn_timeout_timer_;
 
+    Mutex                     ca_session_mtx_;
     map<caid_t, CASession*>   ca_session_map_;
     map<uint64_t, CASession*> terminal_id_ca_session_map_;
     

@@ -1,8 +1,8 @@
 
-
 #include "termsession.h"
+#include <protocol/protocol_v2_pt_message.h>
 
-TermSession::TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tconn)
+TermSession::TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tconn, LoginError *error)
     : ca_session_(0), term_conn_(tconn)
     , user_info_(msg->user_info_desc_.user_info_)
     , odclib_desc_(msg->odclib_desc_)
@@ -13,36 +13,55 @@ TermSession::TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tc
     , logger_(logger)
 {
     // 描述符合法性验证
-    if ( !odclib_desc_.valid_ || !user_info_desc_.valid_ || !cert_data_desc_.valid_ || !terminal_info_desc_.valid_ )
-    {
-        logger_.Error("验证用户登录请求失败，描述符不完整。");
+    if (!odclib_desc_.valid_) {
+        *error = LoginOdcLibDescIncompleted;
+        logger_.Warn("[Terminal Login Valid] OdcLib Descriptor incompleted");
+        return;
+    }
+    if (!user_info_desc_.valid_) {
+        *error = LoginUserInfoDescIncompleted;
+        logger_.Warn("[Terminal Login Valid] UserInfo Descriptor incompleted");
+        return;
+    }
+    if (!cert_data_desc_.valid_) {
+        *error = LoginCertDataDescIncompleted;
+        logger_.Warn("[Terminal Login Valid] CertData Descriptor incompleted");
+        return;
+    }
+    if (!terminal_info_desc_.valid_) {
+        *error = LoginTerminalInfoDescIncompleted;
+        logger_.Warn("[Terminal Login Valid] Terminal Info Descriptor incompleted");
         return;
     }
 
     // 判断TerminalInfoDescriptor内容的正确性
-    if ( !IsValidTermInfoDesc(terminal_info_desc_) )
-    {
-        logger_.Error("验证用户登录请求失败，TerminalInfoDescriptor内容无效。");
+    if (!IsValidTermInfoDesc(terminal_info_desc_)) {
+        *error = LoginTerminalInfoInvalided;
+        logger_.Warn("[Terminal Login Valid] TerminalInfo Descriptor Context Invalided, terminalinfo:"
+                "\n\tclass: %s, \n\tsubclass: %s, \n\tmodel: %s, \n\tname: %s, \n\tcurr url: %s", 
+                kTerminalClassName[terminal_info_desc_.terminal_class_ - 1].c_str(),
+                kSubClassName[terminal_info_desc_.terminal_class_ - 1][terminal_info_desc_.terminal_sub_class_ - 1].c_str(),
+                terminal_info_desc_.terminal_model_.c_str(),
+                terminal_info_desc_.terminal_name_.c_str(),
+                terminal_info_desc_.business_url_.c_str());
         return;
     }
 
     if (!user_info_.valid()) {
-        logger_.Error("PSM Business Pool new TermSession userinfo valid failure");
+        *error = LoginUserInfoInvalided;
+        logger_.Error("[Terminal Login Valid] UserInfo Invalided, userinfo: \n\t%s", msg->user_info_desc_.user_info_.c_str());
         return;
     }
-
-    logger_.Trace("PSM Business Pool new TermSession userinfo:"
-        "\n\tuser id: %s, \n\tcaid: %s, \n\tterminal id: %s, \n\tmac addr: %s", 
-        user_info_.id.c_str(), user_info_.card_id.c_str(), 
-        user_info_.term_id.c_str(), user_info_.mac_addr.c_str());
+    
+    
 
     //get ca card id.
-    bool ok;
-    caid_t caid = to_uint64(user_info_.card_id, &ok);
-    if (!ok) {
-        logger_.Error(
-            "PSM Business Pool new TermSession convert string(%s) to uint64_t(caid) failure", 
-            user_info_.card_id.c_str());
+    bool cast_ok;
+    caid_t caid = to_uint64(user_info_.card_id, &cast_ok);
+    if (!cast_ok) {
+        *error = LoginCastCAIdFailed;
+        logger_.Error("[Terminal Login Valid] new TermSession convert string(%s) to uint64_t(caid) failure", 
+                user_info_.card_id.c_str());
         return;
     }
 
@@ -51,6 +70,20 @@ TermSession::TermSession(Logger &logger, PtLoginRequest *msg, TermConnection *tc
     //cert.
 
     valid_ = true;
+    *error = LoginOK;
+
+    logger_.Trace("[Terminal Login Valid] new TermSession userinfo:"
+        "\n\tuser id: %s, \n\tcaid: %s, \n\tterminal id: %s, \n\tmac addr: %s", 
+        user_info_.id.c_str(), user_info_.card_id.c_str(), 
+        user_info_.term_id.c_str(), user_info_.mac_addr.c_str());
+
+    logger_.Trace("Terminal Login Valid] new TermSession terminalinfo:"
+        "\n\tclass: %s, \n\tsubclass: %s, \n\tmodel: %s, \n\tname: %s, \n\tcurr url: %s", 
+        kTerminalClassName[terminal_info_desc_.terminal_class_ - 1].c_str(),
+        kSubClassName[terminal_info_desc_.terminal_class_ - 1][terminal_info_desc_.terminal_sub_class_ - 1].c_str(),
+        terminal_info_desc_.terminal_model_.c_str(),
+        terminal_info_desc_.terminal_name_.c_str(),
+        terminal_info_desc_.business_url_.c_str());
 }
 
 void TermSession::UpdateSessionInfo(PB_SvcURLDescriptor &url_desc)

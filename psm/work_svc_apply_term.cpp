@@ -14,13 +14,14 @@ TermSvcApplyWork::TermSvcApplyWork(PtSvcApplyRequest *pkg, weak_ptr<TermSession>
 
     work_func_              = TermSvcApplyWork::Func_Begin;
 
-    work_name_              = "终端业务申请-本屏业务";
+    //work_name_              = "终端业务申请-本屏业务";
+    work_name_              = "Terminal Business Apply ---> Same Screen Business";
     //提升引用。
     shared_ptr<TermSession> sp_session_info(self_session_info_.lock());
     if (!sp_session_info)
-        _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
+        _snprintf(log_header_, 300, "[%s][****Terminal Session be deleted****]", work_name_.c_str());
     else 
-        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=0x" SFMT64X "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
 TermSvcApplyWork::TermSvcApplyWork(PtSvcApplyRequest *pkg, weak_ptr<TermSession> self_session_info, weak_ptr<TermSession> cross_session_info )
@@ -35,13 +36,14 @@ TermSvcApplyWork::TermSvcApplyWork(PtSvcApplyRequest *pkg, weak_ptr<TermSession>
 
     work_func_              = TermSvcApplyWork::Func_Begin;
 
-    work_name_              = "终端业务申请-跨屏业务";
+    //work_name_              = "终端业务申请-跨屏业务";
+    work_name_              = "Terminal Business Apply ---> Cross Screen Business";
     //提升引用。
     shared_ptr<TermSession> sp_session_info(self_session_info_.lock());
     if (!sp_session_info)
-        _snprintf(log_header_, 300, "[%s][****被删除的会话****]", work_name_.c_str());
+        _snprintf(log_header_, 300, "[%s][****Terminal Session be deleted****]", work_name_.c_str());
     else 
-        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=" SFMT64U "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
+        _snprintf(log_header_, 300, "[%s][CAID=" SFMT64U "][Self_SID=0x" SFMT64X "]", work_name_.c_str(), sp_session_info->CAId(), sp_session_info->Id());
 }
 
 int TermSvcApplyWork::SendResponed( ByteStream &response_buf )
@@ -337,11 +339,12 @@ void TermSvcApplyWork::Func_Inited( Work *work )
 
                         // 通知呈现端业务切换
                         PtSvcSwitchRequest *svcswitch_request = new PtSvcSwitchRequest;
-
-                        svcapply_response.svc_url_desc_.sm_session_id_ = iter->sm_session_id_;
-                        svcapply_response.svc_url_desc_.url_           = iter->url_;
-                        svcapply_response.svc_url_desc_.back_url_      = iter->back_url_;
-                        svcapply_response.svc_url_desc_.valid_         = true;
+						
+						//xxxxxx: add switch notify svc url descriptor.
+						svcswitch_request->svc_url_desc_.sm_session_id_ = iter->sm_session_id_;
+						svcswitch_request->svc_url_desc_.url_           = iter->url_;
+						svcswitch_request->svc_url_desc_.back_url_      = iter->back_url_;
+						svcswitch_request->svc_url_desc_.valid_         = true;
 
                         if ( need_send_keymap_indicate && (term_keymaping_indicate_desc.dest_session_id_ == iter->session_id_) )
                         {

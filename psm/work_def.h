@@ -70,6 +70,7 @@ struct PSMWork : public DelayedWork
 struct TRequestWork_Login : public PSMWork
 {
     PtLoginRequest *pkg_;
+    TermConnection *tconn_;
 
     enum LoginRunStep{
         Login_Begin = 0,
@@ -79,6 +80,7 @@ struct TRequestWork_Login : public PSMWork
     } run_step_;
 
     TRequestWork_Login(PtLoginRequest *pkg, weak_ptr<TermSession> session_info, void *psm_context);
+    TRequestWork_Login(PtLoginRequest *pkg, TermConnection *tconn, void *psm_context);
     ~TRequestWork_Login();
 
     static void Func_Begin(Work *work);

@@ -122,7 +122,7 @@ void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyReque
             shared_ptr<TermSession> self_ts(self_session.lock());
             if ( self_ts == NULL )
             {
-                psm_context_->logger_.Warn("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：" SFMT64U ". 申请业务的会话[SID=" SFMT64U "]不存在。", 
+                psm_context_->logger_.Warn("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：" SFMT64U ". 申请业务的会话[SID=" SFMT64X "]不存在。", 
                                             pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_,
                                             pkg->svc_self_apply_desc_.session_id_);
                 ret_code = PS_RC_MSG_FORMAT_ERROR;
@@ -139,7 +139,7 @@ void SMRequestProcessSvr::AddSvcApplyWork( BusiConnection *conn, PbSvcApplyReque
             shared_ptr<TermSession> cross_ts(cross_session.lock());
             if ( self_ts == NULL || cross_ts == NULL )
             {
-                psm_context_->logger_.Warn("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：" SFMT64U ". 申请业务的会话[Self_SID=" SFMT64U "][Cross_SID=" SFMT64U "]不存在。", 
+                psm_context_->logger_.Warn("[SM终端业务申请请求] 收到请求，开始处理。 业务ID：%s   流水号：" SFMT64U ". 申请业务的会话[Self_SID=0x" SFMT64X "][Cross_SID=" SFMT64U "]不存在。", 
                     pkg->sequence_no_desc_.business_id_.c_str(), pkg->sequence_no_desc_.sequence_no_,
                     pkg->svc_self_apply_desc_.session_id_,
                     pkg->svc_cross_apply_desc_.show_session_id_);
@@ -208,7 +208,7 @@ int SMRequestProcessSvr::UpdateTermStatus( list<PB_TerminalStatusDescriptor> &te
                 // if status changed, update business status.
                 if ( term_session->terminal_info_desc_.business_status_ != iter->business_status_ )
                 {
-                    psm_context_->logger_.Trace("[状态变更通知][CAID=" SFMT64U "][SID=" SFMT64U "] 会话信息发送变化，向终端发送状态变更通知。", term_session->CAId(), term_session->Id());
+                    psm_context_->logger_.Trace("[状态变更通知][CAID=" SFMT64U "][SID=" SFMT64X "] 会话信息发送变化，向终端发送状态变更通知。", term_session->CAId(), term_session->Id());
 
                     term_session->terminal_info_desc_.business_status_ = iter->business_status_;
                     psm_context_->term_basic_func_svr_->NotifyAllTerminalStatusPChanged(term_session->ca_session_, 0);
@@ -238,7 +238,7 @@ int SMRequestProcessSvr::UpdateTermParam( PbSvcPChangeRequest *pkg )
         //只给在PhoneControl业务中的终端发送业务切换通知
         if ( iter->second->curr_busi_type_ == BSPhoneControl )
         {
-            psm_context_->logger_.Trace("[业务切换通知][CAID=" SFMT64U "][SID=" SFMT64U "] SM返回业务切换指示，向终端发送业务切换通知。", iter->second->CAId(), iter->second->Id());
+            psm_context_->logger_.Trace("[业务切换通知][CAID=" SFMT64U "][SID=" SFMT64X "] SM返回业务切换指示，向终端发送业务切换通知。", iter->second->CAId(), iter->second->Id());
 
             PtSvcSwitchRequest *svcswitch_pkg = new PtSvcSwitchRequest;
             svcswitch_pkg->keymap_indicate_desc_ = pkg->key_map_indicate_desc_;
